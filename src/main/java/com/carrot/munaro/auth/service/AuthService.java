@@ -8,12 +8,14 @@ import com.carrot.munaro.user.domain.UserRole;
 import com.carrot.munaro.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     public void signUp(EmailSignUpRequest request) {
 
@@ -23,7 +25,7 @@ public class AuthService {
 
         User user = new User(
                 request.email(),
-                request.password(),
+                passwordEncoder.encode(request.password()),
                 request.nickname(),
                 AuthProvider.EMAIL,
                 UserRole.USER
@@ -37,7 +39,10 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
 
-        if (!user.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword()
+        )) {
             throw new RuntimeException("비밀번호가 일치하지 않습니다.");
         }
     }
