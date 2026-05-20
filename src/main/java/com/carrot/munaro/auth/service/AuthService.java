@@ -2,20 +2,24 @@ package com.carrot.munaro.auth.service;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
+import com.carrot.munaro.security.JwtProvider;
 import com.carrot.munaro.user.domain.AuthProvider;
 import com.carrot.munaro.user.domain.User;
 import com.carrot.munaro.user.domain.UserRole;
 import com.carrot.munaro.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+import com.carrot.munaro.auth.dto.response.LoginResponse;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
 
     public void signUp(EmailSignUpRequest request) {
 
@@ -34,16 +38,24 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public void login(LoginRequest request) {
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
+                .orElseThrow(() ->
+                        new RuntimeException("사용자 없음"));
 
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPassword()
         )) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+            throw new RuntimeException("비밀번호 불일치");
         }
-    }
-}
+
+        String accessToken =
+                jwtProvider.createToken(user.getId());
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .build();
+    }}

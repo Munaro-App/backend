@@ -2,14 +2,16 @@ package com.carrot.munaro.auth.controller;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
+import com.carrot.munaro.auth.dto.response.LoginResponse;
 import com.carrot.munaro.auth.service.AuthService;
 import com.carrot.munaro.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -24,13 +26,10 @@ public class AuthController {
         return ApiResponse.ok(null);
     }
 
-    @PostMapping("/login")
-    public ApiResponse<Void> login(
+    @PostMapping("/email/login")
+    public ResponseEntity<LoginResponse> login(
             @RequestBody LoginRequest request
     ) {
-
-        authService.login(request);
-
-        return ApiResponse.ok(null);
+        return ResponseEntity.ok(authService.login(request));
     }
 }
