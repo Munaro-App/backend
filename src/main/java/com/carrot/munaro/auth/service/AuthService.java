@@ -21,6 +21,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
 
+    @Transactional
     public void signUp(EmailSignUpRequest request) {
 
         if (userRepository.existsByEmail(request.email())) {
