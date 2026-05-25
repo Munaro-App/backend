@@ -2,6 +2,8 @@ package com.carrot.munaro.auth.service;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
+import com.carrot.munaro.global.exception.BusinessException;
+import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.security.JwtProvider;
 import com.carrot.munaro.user.domain.AuthProvider;
 import com.carrot.munaro.user.domain.User;
@@ -25,16 +27,18 @@ public class AuthService {
     public void signUp(EmailSignUpRequest request) {
 
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("이미 존재하는 이메일입니다.");
+            throw new BusinessException(
+                    ErrorCode.EMAIL_ALREADY_EXISTS
+            );
         }
 
-        User user = new User(
-                request.email(),
-                passwordEncoder.encode(request.password()),
-                request.nickname(),
-                AuthProvider.EMAIL,
-                UserRole.USER
-        );
+        User user = User.builder()
+                .email(request.email())
+                .password(passwordEncoder.encode(request.password()))
+                .nickname(request.nickname())
+                .provider(AuthProvider.EMAIL)
+                .role(UserRole.USER)
+                .build();
 
         userRepository.save(user);
     }
@@ -42,15 +46,19 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() ->
-                        new RuntimeException("사용자 없음"));
+                        new BusinessException(
+                                ErrorCode.INVALID_LOGIN
+                        ));
 
         if (!passwordEncoder.matches(
-                request.getPassword(),
+                request.password(),
                 user.getPassword()
         )) {
-            throw new RuntimeException("비밀번호 불일치");
+            throw new BusinessException(
+                    ErrorCode.INVALID_LOGIN
+            );
         }
 
         String accessToken =
