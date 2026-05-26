@@ -1,9 +1,11 @@
 package com.carrot.munaro.global.exception;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 @Getter
+@RequiredArgsConstructor
 public enum ErrorCode {
 
     // 공통
@@ -35,14 +37,4 @@ public enum ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
-
-    ErrorCode(
-            HttpStatus status,
-            String code,
-            String message
-    ) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
-    }
 }
