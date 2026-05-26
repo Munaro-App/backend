@@ -1,9 +1,11 @@
 package com.carrot.munaro.auth.service;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
+import com.carrot.munaro.auth.dto.request.KakaoLoginRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
+import com.carrot.munaro.auth.dto.response.KakaoUserResponse;
 import com.carrot.munaro.security.JwtProvider;
 import com.carrot.munaro.user.domain.AuthProvider;
 import com.carrot.munaro.user.domain.User;
@@ -14,6 +16,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.carrot.munaro.auth.dto.response.LoginResponse;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +29,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final RestTemplate restTemplate;
 
     @Transactional
     public void signUp(EmailSignUpRequest request) {
@@ -36,7 +44,7 @@ public class AuthService {
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
-                .provider(AuthProvider.EMAIL)
+                .authProvider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
                 .build();
 
@@ -67,4 +75,63 @@ public class AuthService {
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .build();
-    }}
+    }
+
+    @Transactional
+    public LoginResponse kakaoLogin(
+            KakaoLoginRequest request
+    ) {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(request.accessToken());
+
+        HttpEntity<Void> entity =
+                new HttpEntity<>(headers);
+
+        ResponseEntity<KakaoUserResponse> response =
+                restTemplate.exchange(
+                        "https://kapi.kakao.com/v2/user/me",
+                        HttpMethod.GET,
+                        entity,
+                        KakaoUserResponse.class
+                );
+
+        KakaoUserResponse kakaoUser =
+                response.getBody();
+
+        String email =
+                kakaoUser.getKakao_account().getEmail();
+
+        String nickname =
+                kakaoUser.getKakao_account()
+                        .getProfile()
+                        .getNickname();
+
+        String providerId =
+                String.valueOf(kakaoUser.getId());
+
+        User user = userRepository
+                .findByEmail(email)
+                .orElseGet(() -> {
+
+                    User newUser = User.builder()
+                            .email(email)
+                            .nickname(nickname)
+                            .authProvider(AuthProvider.KAKAO)
+                            .providerId(providerId)
+                            .role(UserRole.USER)
+                            .build();
+
+                    return userRepository.save(newUser);
+                });
+
+        String accessToken =
+                jwtProvider.createToken(user.getId());
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .build();
+    }
+
+}
+
