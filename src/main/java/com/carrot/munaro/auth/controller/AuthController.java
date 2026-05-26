@@ -8,6 +8,7 @@ import com.carrot.munaro.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
@@ -18,7 +19,7 @@ public class AuthController {
 
     @PostMapping("/email/signup")
     public ApiResponse<Void> signUp(
-            @RequestBody EmailSignUpRequest request
+            @Valid @RequestBody EmailSignUpRequest request
     ) {
 
         authService.signUp(request);
@@ -28,7 +29,7 @@ public class AuthController {
 
     @PostMapping("/email/login")
     public ResponseEntity<LoginResponse> login(
-            @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request
     ) {
         return ResponseEntity.ok(authService.login(request));
     }
