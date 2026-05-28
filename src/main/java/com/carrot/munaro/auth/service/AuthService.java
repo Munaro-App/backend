@@ -3,23 +3,21 @@ package com.carrot.munaro.auth.service;
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
 import com.carrot.munaro.auth.dto.request.KakaoLoginRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
+import com.carrot.munaro.auth.dto.response.KakaoUserResponse;
+import com.carrot.munaro.auth.dto.response.LoginResponse;
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
-import com.carrot.munaro.auth.dto.response.KakaoUserResponse;
 import com.carrot.munaro.security.JwtProvider;
 import com.carrot.munaro.user.domain.AuthProvider;
 import com.carrot.munaro.user.domain.User;
 import com.carrot.munaro.user.domain.UserRole;
 import com.carrot.munaro.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.carrot.munaro.auth.dto.response.LoginResponse;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -82,56 +80,86 @@ public class AuthService {
             KakaoLoginRequest request
     ) {
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(request.accessToken());
+        try {
 
-        HttpEntity<Void> entity =
-                new HttpEntity<>(headers);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(request.accessToken());
 
-        ResponseEntity<KakaoUserResponse> response =
-                restTemplate.exchange(
-                        "https://kapi.kakao.com/v2/user/me",
-                        HttpMethod.GET,
-                        entity,
-                        KakaoUserResponse.class
+            HttpEntity<Void> entity =
+                    new HttpEntity<>(headers);
+
+            ResponseEntity<KakaoUserResponse> response =
+                    restTemplate.exchange(
+                            "https://kapi.kakao.com/v2/user/me",
+                            HttpMethod.GET,
+                            entity,
+                            KakaoUserResponse.class
+                    );
+
+            KakaoUserResponse kakaoUser =
+                    response.getBody();
+
+            if (kakaoUser == null ||
+                    kakaoUser.getKakao_account() == null ||
+                    kakaoUser.getKakao_account().getProfile() == null) {
+
+                throw new BusinessException(
+                        ErrorCode.KAKAO_USER_INFO_NOT_FOUND
                 );
+            }
 
-        KakaoUserResponse kakaoUser =
-                response.getBody();
+            String email =
+                    kakaoUser.getKakao_account().getEmail();
 
-        String email =
-                kakaoUser.getKakao_account().getEmail();
+            String nickname =
+                    kakaoUser.getKakao_account()
+                            .getProfile()
+                            .getNickname();
 
-        String nickname =
-                kakaoUser.getKakao_account()
-                        .getProfile()
-                        .getNickname();
+            String providerId =
+                    String.valueOf(kakaoUser.getId());
 
-        String providerId =
-                String.valueOf(kakaoUser.getId());
+            if (email == null || nickname == null) {
+                throw new BusinessException(
+                        ErrorCode.KAKAO_USER_INFO_NOT_FOUND
+                );
+            }
 
-        User user = userRepository
-                .findByEmail(email)
-                .orElseGet(() -> {
+            User user = userRepository
+                    .findByEmail(email)
+                    .orElseGet(() -> {
 
-                    User newUser = User.builder()
-                            .email(email)
-                            .nickname(nickname)
-                            .authProvider(AuthProvider.KAKAO)
-                            .providerId(providerId)
-                            .role(UserRole.USER)
-                            .build();
+                        User newUser = User.builder()
+                                .email(email)
+                                .nickname(nickname)
+                                .authProvider(AuthProvider.KAKAO)
+                                .providerId(providerId)
+                                .role(UserRole.USER)
+                                .build();
 
-                    return userRepository.save(newUser);
-                });
+                        return userRepository.save(newUser);
+                    });
 
-        String accessToken =
-                jwtProvider.createToken(user.getId());
+            String accessToken =
+                    jwtProvider.createToken(user.getId());
 
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .build();
+            return LoginResponse.builder()
+                    .accessToken(accessToken)
+                    .build();
+
+        } catch (ResourceAccessException e) {
+
+            throw new BusinessException(
+                    ErrorCode.KAKAO_SERVER_TIMEOUT
+            );
+
+        } catch (Exception e) {
+
+            throw new BusinessException(
+                    ErrorCode.KAKAO_LOGIN_FAILED
+            );
+        }
     }
-
 }
+
 
