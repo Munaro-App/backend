@@ -5,10 +5,9 @@ import lombok.*;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
 public class User {
 
@@ -19,22 +18,35 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    // 카카오 로그인 유저는 비밀번호 없을 수 있음
     @Column
     private String password;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String nickname;
+
+    @Column
+    private String profileImageUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuthProvider authProvider;
+
+    public void updateProvider(
+            AuthProvider provider,
+            String providerId
+    ) {
+        this.authProvider = provider;
+        this.providerId = providerId;
+    }
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AuthProvider provider;
+    @Builder.Default
+    private String userStatus = "ACTIVE";
 
-    // OAuth 제공자 고유 ID
     @Column
     private String providerId;
 }

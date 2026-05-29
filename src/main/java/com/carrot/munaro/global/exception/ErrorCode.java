@@ -32,6 +32,24 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "AUTH_002",
             "이메일 또는 비밀번호가 올바르지 않습니다."
+    ),
+
+    KAKAO_LOGIN_FAILED(
+            HttpStatus.BAD_REQUEST,
+            "AUTH_003",
+            "카카오 로그인에 실패했습니다."
+    ),
+
+    KAKAO_SERVER_TIMEOUT(
+            HttpStatus.REQUEST_TIMEOUT,
+            "AUTH_004",
+            "카카오 서버 응답 시간이 초과되었습니다."
+    ),
+
+    KAKAO_USER_INFO_NOT_FOUND(
+            HttpStatus.BAD_REQUEST,
+            "AUTH_005",
+            "카카오 사용자 정보를 불러올 수 없습니다."
     );
 
     private final HttpStatus status;
