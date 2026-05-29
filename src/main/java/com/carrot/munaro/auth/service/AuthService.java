@@ -42,8 +42,11 @@ public class AuthService {
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
+                .profileImageUrl(null)
                 .authProvider(AuthProvider.EMAIL)
+                .provider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
+                .userStatus("ACTIVE")
                 .build();
 
         userRepository.save(user);
@@ -70,8 +73,22 @@ public class AuthService {
         String accessToken =
                 jwtProvider.createToken(user.getId());
 
+
         return LoginResponse.builder()
                 .accessToken(accessToken)
+                .refreshToken(null)
+                .expiresIn(3600L)
+                .user(
+                        LoginResponse.UserInfo.builder()
+                                .id(user.getId())
+                                .nickname(user.getNickname())
+                                .profileImageUrl(user.getProfileImageUrl())
+                                .userRole(user.getRole().name())
+                                .userStatus(user.getUserStatus())
+                                .isNewUser(false)
+                                .dogSetupRequired(false)
+                                .build()
+                )
                 .build();
     }
 
@@ -132,9 +149,12 @@ public class AuthService {
                         User newUser = User.builder()
                                 .email(email)
                                 .nickname(nickname)
+                                .profileImageUrl(null)
                                 .authProvider(AuthProvider.KAKAO)
+                                .provider(AuthProvider.KAKAO)
                                 .providerId(providerId)
                                 .role(UserRole.USER)
+                                .userStatus("ACTIVE")
                                 .build();
 
                         return userRepository.save(newUser);
@@ -145,6 +165,25 @@ public class AuthService {
 
             return LoginResponse.builder()
                     .accessToken(accessToken)
+                    .refreshToken(null)
+                    .expiresIn(3600L)
+                    .user(
+                            LoginResponse.UserInfo.builder()
+                                    .id(user.getId())
+                                    .nickname(user.getNickname())
+                                    .profileImageUrl(
+                                            user.getProfileImageUrl()
+                                    )
+                                    .userRole(
+                                            user.getRole().name()
+                                    )
+                                    .userStatus(
+                                            user.getUserStatus()
+                                    )
+                                    .isNewUser(false)
+                                    .dogSetupRequired(false)
+                                    .build()
+                    )
                     .build();
 
         } catch (ResourceAccessException e) {
@@ -159,7 +198,6 @@ public class AuthService {
                     ErrorCode.KAKAO_LOGIN_FAILED
             );
         }
-    }
-}
+    }}
 
 

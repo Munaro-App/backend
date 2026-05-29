@@ -18,12 +18,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    // OAuth 유저는 비밀번호 없을 수 있음
     @Column
     private String password;
 
     @Column(nullable = false, unique = true)
     private String nickname;
+
+    @Column
+    private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -31,9 +33,16 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private AuthProvider provider;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private UserRole role;
 
-    // OAuth 제공자 고유 ID
+    @Column(nullable = false)
+    @Builder.Default
+    private String userStatus = "ACTIVE";
+
     @Column
     private String providerId;
 }
