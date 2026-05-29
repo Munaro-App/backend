@@ -44,7 +44,6 @@ public class AuthService {
                 .nickname(request.nickname())
                 .profileImageUrl(null)
                 .authProvider(AuthProvider.EMAIL)
-                .provider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
                 .userStatus("ACTIVE")
                 .build();
@@ -144,6 +143,19 @@ public class AuthService {
 
             User user = userRepository
                     .findByEmail(email)
+                    .map(existingUser -> {
+
+                        if (existingUser.getProviderId() == null) {
+                            existingUser.updateProvider(
+                                    AuthProvider.KAKAO,
+                                    providerId
+                            );
+
+                            return userRepository.save(existingUser);
+                        }
+
+                        return existingUser;
+                    })
                     .orElseGet(() -> {
 
                         User newUser = User.builder()
@@ -151,7 +163,6 @@ public class AuthService {
                                 .nickname(nickname)
                                 .profileImageUrl(null)
                                 .authProvider(AuthProvider.KAKAO)
-                                .provider(AuthProvider.KAKAO)
                                 .providerId(providerId)
                                 .role(UserRole.USER)
                                 .userStatus("ACTIVE")

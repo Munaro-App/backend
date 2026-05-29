@@ -31,9 +31,13 @@ public class User {
     @Column(nullable = false)
     private AuthProvider authProvider;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private AuthProvider provider;
+    public void updateProvider(
+            AuthProvider provider,
+            String providerId
+    ) {
+        this.authProvider = provider;
+        this.providerId = providerId;
+    }
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
