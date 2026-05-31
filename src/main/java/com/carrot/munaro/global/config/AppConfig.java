@@ -2,6 +2,10 @@ package com.carrot.munaro.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+<<<<<<< HEAD
+=======
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+>>>>>>> origin/main
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
@@ -9,6 +13,20 @@ public class AppConfig {
 
     @Bean
     public RestTemplate restTemplate() {
+<<<<<<< HEAD
         return new RestTemplate();
+=======
+
+        SimpleClientHttpRequestFactory factory =
+                new SimpleClientHttpRequestFactory();
+
+        // 연결 timeout
+        factory.setConnectTimeout(3000);
+
+        // 응답 timeout
+        factory.setReadTimeout(5000);
+
+        return new RestTemplate(factory);
+>>>>>>> origin/main
     }
 }

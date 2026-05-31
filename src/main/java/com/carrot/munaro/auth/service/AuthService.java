@@ -1,9 +1,16 @@
 package com.carrot.munaro.auth.service;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
+<<<<<<< HEAD
 import com.carrot.munaro.auth.dto.request.GoogleLoginRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
 import com.carrot.munaro.auth.dto.response.GoogleUserResponse;
+=======
+import com.carrot.munaro.auth.dto.request.KakaoLoginRequest;
+import com.carrot.munaro.auth.dto.request.LoginRequest;
+import com.carrot.munaro.auth.dto.response.KakaoUserResponse;
+import com.carrot.munaro.auth.dto.response.LoginResponse;
+>>>>>>> origin/main
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.security.JwtProvider;
@@ -12,11 +19,16 @@ import com.carrot.munaro.user.domain.User;
 import com.carrot.munaro.user.domain.UserRole;
 import com.carrot.munaro.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+<<<<<<< HEAD
 import com.carrot.munaro.auth.dto.response.LoginResponse;
 import org.springframework.http.ResponseEntity;
+=======
+import org.springframework.web.client.ResourceAccessException;
+>>>>>>> origin/main
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -41,8 +53,13 @@ public class AuthService {
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
+<<<<<<< HEAD
+=======
+                .profileImageUrl(null)
+>>>>>>> origin/main
                 .authProvider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
+                .userStatus("ACTIVE")
                 .build();
 
         userRepository.save(user);
@@ -69,10 +86,25 @@ public class AuthService {
         String accessToken =
                 jwtProvider.createToken(user.getId());
 
+
         return LoginResponse.builder()
                 .accessToken(accessToken)
+                .refreshToken(null)
+                .expiresIn(3600L)
+                .user(
+                        LoginResponse.UserInfo.builder()
+                                .id(user.getId())
+                                .nickname(user.getNickname())
+                                .profileImageUrl(user.getProfileImageUrl())
+                                .userRole(user.getRole().name())
+                                .userStatus(user.getUserStatus())
+                                .isNewUser(false)
+                                .dogSetupRequired(false)
+                                .build()
+                )
                 .build();
     }
+<<<<<<< HEAD
     @Transactional
     public LoginResponse googleLogin(
             GoogleLoginRequest request
@@ -120,3 +152,127 @@ public class AuthService {
                 .build();
     }
 }
+=======
+
+    @Transactional
+    public LoginResponse kakaoLogin(
+            KakaoLoginRequest request
+    ) {
+
+        try {
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(request.accessToken());
+
+            HttpEntity<Void> entity =
+                    new HttpEntity<>(headers);
+
+            ResponseEntity<KakaoUserResponse> response =
+                    restTemplate.exchange(
+                            "https://kapi.kakao.com/v2/user/me",
+                            HttpMethod.GET,
+                            entity,
+                            KakaoUserResponse.class
+                    );
+
+            KakaoUserResponse kakaoUser =
+                    response.getBody();
+
+            if (kakaoUser == null ||
+                    kakaoUser.getKakao_account() == null ||
+                    kakaoUser.getKakao_account().getProfile() == null) {
+
+                throw new BusinessException(
+                        ErrorCode.KAKAO_USER_INFO_NOT_FOUND
+                );
+            }
+
+            String email =
+                    kakaoUser.getKakao_account().getEmail();
+
+            String nickname =
+                    kakaoUser.getKakao_account()
+                            .getProfile()
+                            .getNickname();
+
+            String providerId =
+                    String.valueOf(kakaoUser.getId());
+
+            if (email == null || nickname == null) {
+                throw new BusinessException(
+                        ErrorCode.KAKAO_USER_INFO_NOT_FOUND
+                );
+            }
+
+            User user = userRepository
+                    .findByEmail(email)
+                    .map(existingUser -> {
+
+                        if (existingUser.getProviderId() == null) {
+                            existingUser.updateProvider(
+                                    AuthProvider.KAKAO,
+                                    providerId
+                            );
+
+                            return userRepository.save(existingUser);
+                        }
+
+                        return existingUser;
+                    })
+                    .orElseGet(() -> {
+
+                        User newUser = User.builder()
+                                .email(email)
+                                .nickname(nickname)
+                                .profileImageUrl(null)
+                                .authProvider(AuthProvider.KAKAO)
+                                .providerId(providerId)
+                                .role(UserRole.USER)
+                                .userStatus("ACTIVE")
+                                .build();
+
+                        return userRepository.save(newUser);
+                    });
+
+            String accessToken =
+                    jwtProvider.createToken(user.getId());
+
+            return LoginResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(null)
+                    .expiresIn(3600L)
+                    .user(
+                            LoginResponse.UserInfo.builder()
+                                    .id(user.getId())
+                                    .nickname(user.getNickname())
+                                    .profileImageUrl(
+                                            user.getProfileImageUrl()
+                                    )
+                                    .userRole(
+                                            user.getRole().name()
+                                    )
+                                    .userStatus(
+                                            user.getUserStatus()
+                                    )
+                                    .isNewUser(false)
+                                    .dogSetupRequired(false)
+                                    .build()
+                    )
+                    .build();
+
+        } catch (ResourceAccessException e) {
+
+            throw new BusinessException(
+                    ErrorCode.KAKAO_SERVER_TIMEOUT
+            );
+
+        } catch (Exception e) {
+
+            throw new BusinessException(
+                    ErrorCode.KAKAO_LOGIN_FAILED
+            );
+        }
+    }}
+
+
+>>>>>>> origin/main
