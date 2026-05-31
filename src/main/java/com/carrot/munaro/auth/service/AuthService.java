@@ -1,16 +1,12 @@
 package com.carrot.munaro.auth.service;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
-<<<<<<< HEAD
 import com.carrot.munaro.auth.dto.request.GoogleLoginRequest;
-import com.carrot.munaro.auth.dto.request.LoginRequest;
-import com.carrot.munaro.auth.dto.response.GoogleUserResponse;
-=======
 import com.carrot.munaro.auth.dto.request.KakaoLoginRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
+import com.carrot.munaro.auth.dto.response.GoogleUserResponse;
 import com.carrot.munaro.auth.dto.response.KakaoUserResponse;
 import com.carrot.munaro.auth.dto.response.LoginResponse;
->>>>>>> origin/main
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.security.JwtProvider;
@@ -23,12 +19,7 @@ import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-<<<<<<< HEAD
-import com.carrot.munaro.auth.dto.response.LoginResponse;
-import org.springframework.http.ResponseEntity;
-=======
 import org.springframework.web.client.ResourceAccessException;
->>>>>>> origin/main
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -53,10 +44,7 @@ public class AuthService {
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
-<<<<<<< HEAD
-=======
                 .profileImageUrl(null)
->>>>>>> origin/main
                 .authProvider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
                 .userStatus("ACTIVE")
@@ -104,55 +92,6 @@ public class AuthService {
                 )
                 .build();
     }
-<<<<<<< HEAD
-    @Transactional
-    public LoginResponse googleLogin(
-            GoogleLoginRequest request
-    ) {
-
-        ResponseEntity<GoogleUserResponse> response =
-                restTemplate.getForEntity(
-                        "https://oauth2.googleapis.com/tokeninfo?id_token="
-                                + request.idToken(),
-                        GoogleUserResponse.class
-                );
-
-        GoogleUserResponse googleUser =
-                response.getBody();
-
-        String email =
-                googleUser.getEmail();
-
-        String nickname =
-                googleUser.getName();
-
-        String providerId =
-                googleUser.getSub();
-
-        User user = userRepository
-                .findByEmail(email)
-                .orElseGet(() -> {
-
-                    User newUser = User.builder()
-                            .email(email)
-                            .nickname(nickname)
-                            .authProvider(AuthProvider.GOOGLE)
-                            .providerId(providerId)
-                            .role(UserRole.USER)
-                            .build();
-
-                    return userRepository.save(newUser);
-                });
-
-        String accessToken =
-                jwtProvider.createToken(user.getId());
-
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .build();
-    }
-}
-=======
 
     @Transactional
     public LoginResponse kakaoLogin(
@@ -272,7 +211,87 @@ public class AuthService {
                     ErrorCode.KAKAO_LOGIN_FAILED
             );
         }
-    }}
+    }
 
+    @Transactional
+    public LoginResponse googleLogin(
+            GoogleLoginRequest request
+    ) {
 
->>>>>>> origin/main
+        ResponseEntity<GoogleUserResponse> response =
+                restTemplate.getForEntity(
+                        "https://oauth2.googleapis.com/tokeninfo?id_token="
+                                + request.idToken(),
+                        GoogleUserResponse.class
+                );
+
+        GoogleUserResponse googleUser =
+                response.getBody();
+
+        if (googleUser == null) {
+            throw new BusinessException(
+                    ErrorCode.GOOGLE_LOGIN_FAILED
+            );
+        }
+
+        String email = googleUser.getEmail();
+        String nickname = googleUser.getName();
+        String providerId = googleUser.getSub();
+
+        User user = userRepository
+                .findByEmail(email)
+                .map(existingUser -> {
+
+                    if (existingUser.getProviderId() == null) {
+                        existingUser.updateProvider(
+                                AuthProvider.GOOGLE,
+                                providerId
+                        );
+
+                        return userRepository.save(existingUser);
+                    }
+
+                    return existingUser;
+                })
+                .orElseGet(() -> {
+
+                    User newUser = User.builder()
+                            .email(email)
+                            .nickname(nickname)
+                            .profileImageUrl(null)
+                            .authProvider(AuthProvider.GOOGLE)
+                            .providerId(providerId)
+                            .role(UserRole.USER)
+                            .userStatus("ACTIVE")
+                            .build();
+
+                    return userRepository.save(newUser);
+                });
+
+        String accessToken =
+                jwtProvider.createToken(user.getId());
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(null)
+                .expiresIn(3600L)
+                .user(
+                        LoginResponse.UserInfo.builder()
+                                .id(user.getId())
+                                .nickname(user.getNickname())
+                                .profileImageUrl(
+                                        user.getProfileImageUrl()
+                                )
+                                .userRole(
+                                        user.getRole().name()
+                                )
+                                .userStatus(
+                                        user.getUserStatus()
+                                )
+                                .isNewUser(false)
+                                .dogSetupRequired(false)
+                                .build()
+                )
+                .build();
+    }
+}

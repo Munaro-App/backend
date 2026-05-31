@@ -1,11 +1,8 @@
 package com.carrot.munaro.auth.controller;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
-<<<<<<< HEAD
 import com.carrot.munaro.auth.dto.request.GoogleLoginRequest;
-=======
 import com.carrot.munaro.auth.dto.request.KakaoLoginRequest;
->>>>>>> origin/main
 import com.carrot.munaro.auth.dto.request.LoginRequest;
 import com.carrot.munaro.auth.dto.response.LoginResponse;
 import com.carrot.munaro.auth.service.AuthService;
@@ -39,18 +36,6 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-<<<<<<< HEAD
-    @PostMapping("/google/login")
-    public ApiResponse<LoginResponse> googleLogin(
-
-            @Valid @RequestBody
-            GoogleLoginRequest request
-
-    ) {
-
-        LoginResponse response =
-                authService.googleLogin(request);
-=======
     @PostMapping("/kakao/login")
     public ApiResponse<LoginResponse> kakaoLogin(
             @Valid @RequestBody
@@ -59,7 +44,18 @@ public class AuthController {
 
         LoginResponse response =
                 authService.kakaoLogin(request);
->>>>>>> origin/main
+
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/google/login")
+    public ApiResponse<LoginResponse> googleLogin(
+            @Valid @RequestBody
+            GoogleLoginRequest request
+    ) {
+
+        LoginResponse response =
+                authService.googleLogin(request);
 
         return ApiResponse.ok(response);
     }
