@@ -13,23 +13,35 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column
-    private String password;
 
     @Column(nullable = false, unique = true)
     private String nickname;
 
-    @Column
-    private String profileImageUrl;
+    @Column(unique = true)
+    private String email;
+
+    @Column(name = "password_hash")
+    private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AuthProvider authProvider;
+
+    @Column(name = "provider_user_id")
+    private String providerId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus userStatus = UserStatus.ACTIVE;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Profile profile;
 
     public void updateProvider(
             AuthProvider provider,
@@ -38,15 +50,4 @@ public class User {
         this.authProvider = provider;
         this.providerId = providerId;
     }
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private String userStatus = "ACTIVE";
-
-    @Column
-    private String providerId;
 }

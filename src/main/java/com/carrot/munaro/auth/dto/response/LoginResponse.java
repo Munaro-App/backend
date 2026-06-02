@@ -18,7 +18,6 @@ public class LoginResponse {
 
         private Long id;
         private String nickname;
-        private String profileImageUrl;
         private String userRole;
         private String userStatus;
         private boolean isNewUser;

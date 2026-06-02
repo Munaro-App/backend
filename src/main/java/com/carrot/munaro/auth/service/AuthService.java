@@ -8,9 +8,8 @@ import com.carrot.munaro.auth.dto.response.LoginResponse;
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.security.JwtProvider;
-import com.carrot.munaro.user.domain.AuthProvider;
-import com.carrot.munaro.user.domain.User;
-import com.carrot.munaro.user.domain.UserRole;
+import com.carrot.munaro.user.domain.*;
+import com.carrot.munaro.user.repository.ProfileRepository;
 import com.carrot.munaro.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -28,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final RestTemplate restTemplate;
+    private final ProfileRepository profileRepository;
 
     @Transactional
     public void signUp(EmailSignUpRequest request) {
@@ -42,13 +42,20 @@ public class AuthService {
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
-                .profileImageUrl(null)
                 .authProvider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
-                .userStatus("ACTIVE")
+                .userStatus(UserStatus.ACTIVE)
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        Profile profile = Profile.builder()
+                .user(savedUser)
+                .avatarType(AvatarType.PRESET)
+                .avatarValue("default_profile")
+                .build();
+
+        profileRepository.save(profile);
     }
 
     @Transactional(readOnly = true)
@@ -81,9 +88,8 @@ public class AuthService {
                         LoginResponse.UserInfo.builder()
                                 .id(user.getId())
                                 .nickname(user.getNickname())
-                                .profileImageUrl(user.getProfileImageUrl())
                                 .userRole(user.getRole().name())
-                                .userStatus(user.getUserStatus())
+                                .userStatus(user.getUserStatus().name())
                                 .isNewUser(false)
                                 .dogSetupRequired(false)
                                 .build()
@@ -161,14 +167,23 @@ public class AuthService {
                         User newUser = User.builder()
                                 .email(email)
                                 .nickname(nickname)
-                                .profileImageUrl(null)
                                 .authProvider(AuthProvider.KAKAO)
                                 .providerId(providerId)
                                 .role(UserRole.USER)
-                                .userStatus("ACTIVE")
+                                .userStatus(UserStatus.ACTIVE)
                                 .build();
 
-                        return userRepository.save(newUser);
+                        User savedUser = userRepository.save(newUser);
+
+                        Profile profile = Profile.builder()
+                                .user(savedUser)
+                                .avatarType(AvatarType.PRESET)
+                                .avatarValue("default_avatar")
+                                .build();
+
+                        profileRepository.save(profile);
+
+                        return savedUser;
                     });
 
             String accessToken =
@@ -182,9 +197,6 @@ public class AuthService {
                             LoginResponse.UserInfo.builder()
                                     .id(user.getId())
                                     .nickname(user.getNickname())
-                                    .profileImageUrl(
-                                            user.getProfileImageUrl()
-                                    )
                                     .userRole(
                                             user.getRole().name()
                                     )
