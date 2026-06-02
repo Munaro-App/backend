@@ -137,27 +137,68 @@ public class AuthService {
             String providerId =
                     String.valueOf(kakaoUser.getId());
 
-            if (email == null || nickname == null) {
+            if (nickname == null) {
                 throw new BusinessException(
                         ErrorCode.KAKAO_USER_INFO_NOT_FOUND
                 );
             }
 
-            User user = userRepository
-                    .findByEmail(email)
-                    .map(existingUser -> {
+            User user;
 
-                        if (existingUser.getProviderId() == null) {
-                            existingUser.updateProvider(
-                                    AuthProvider.KAKAO,
-                                    providerId
-                            );
+            // 1. 이메일이 있으면 기존 이메일 계정 연동
+            if (email != null) {
 
-                            return userRepository.save(existingUser);
-                        }
+                user = userRepository
+                        .findByEmail(email)
+                        .map(existingUser -> {
 
-                        return existingUser;
-                    })
+                            if (existingUser.getProviderId() == null) {
+
+                                existingUser.updateProvider(
+                                        AuthProvider.KAKAO,
+                                        providerId
+                                );
+
+                                return userRepository.save(existingUser);
+                            }
+
+                            return existingUser;
+                        })
+                        .orElse(null);
+
+                if (user != null) {
+
+                    String accessToken =
+                            jwtProvider.createToken(user.getId());
+
+                    return LoginResponse.builder()
+                            .accessToken(accessToken)
+                            .refreshToken(null)
+                            .expiresIn(3600L)
+                            .user(
+                                    LoginResponse.UserInfo.builder()
+                                            .id(user.getId())
+                                            .nickname(user.getNickname())
+                                            .profileImageUrl(
+                                                    user.getProfileImageUrl()
+                                            )
+                                            .userRole(
+                                                    user.getRole().name()
+                                            )
+                                            .userStatus(
+                                                    user.getUserStatus()
+                                            )
+                                            .isNewUser(false)
+                                            .dogSetupRequired(false)
+                                            .build()
+                            )
+                            .build();
+                }
+            }
+
+            // 2. providerId로 조회
+            user = userRepository
+                    .findByProviderId(providerId)
                     .orElseGet(() -> {
 
                         User newUser = User.builder()
@@ -201,11 +242,15 @@ public class AuthService {
 
         } catch (ResourceAccessException e) {
 
+            e.printStackTrace();
+
             throw new BusinessException(
                     ErrorCode.KAKAO_SERVER_TIMEOUT
             );
 
         } catch (Exception e) {
+
+            e.printStackTrace();
 
             throw new BusinessException(
                     ErrorCode.KAKAO_LOGIN_FAILED
@@ -218,80 +263,97 @@ public class AuthService {
             GoogleLoginRequest request
     ) {
 
-        ResponseEntity<GoogleUserResponse> response =
-                restTemplate.getForEntity(
-                        "https://oauth2.googleapis.com/tokeninfo?id_token="
-                                + request.idToken(),
-                        GoogleUserResponse.class
+        try {
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(request.accessToken());
+
+            HttpEntity<Void> entity =
+                    new HttpEntity<>(headers);
+
+            ResponseEntity<GoogleUserResponse> response =
+                    restTemplate.exchange(
+                            "https://www.googleapis.com/oauth2/v3/userinfo",
+                            HttpMethod.GET,
+                            entity,
+                            GoogleUserResponse.class
+                    );
+
+            GoogleUserResponse googleUser =
+                    response.getBody();
+
+            if (googleUser == null) {
+                throw new BusinessException(
+                        ErrorCode.GOOGLE_USER_INFO_NOT_FOUND
                 );
+            }
 
-        GoogleUserResponse googleUser =
-                response.getBody();
+            String providerId =
+                    googleUser.getSub();
 
-        if (googleUser == null) {
+            String email =
+                    googleUser.getEmail();
+
+            String nickname =
+                    googleUser.getName();
+
+            String profileImageUrl =
+                    googleUser.getPicture();
+
+            User user =
+                    userRepository
+                            .findByProviderId(providerId)
+                            .orElseGet(() -> {
+
+                                User newUser =
+                                        User.builder()
+                                                .email(email)
+                                                .nickname(nickname)
+                                                .profileImageUrl(profileImageUrl)
+                                                .authProvider(AuthProvider.GOOGLE)
+                                                .providerId(providerId)
+                                                .role(UserRole.USER)
+                                                .userStatus("ACTIVE")
+                                                .build();
+
+                                return userRepository.save(newUser);
+                            });
+
+            String accessToken =
+                    jwtProvider.createToken(
+                            user.getId()
+                    );
+
+            return LoginResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(null)
+                    .expiresIn(3600L)
+                    .user(
+                            LoginResponse.UserInfo.builder()
+                                    .id(user.getId())
+                                    .nickname(user.getNickname())
+                                    .profileImageUrl(
+                                            user.getProfileImageUrl()
+                                    )
+                                    .userRole(
+                                            user.getRole().name()
+                                    )
+                                    .userStatus(
+                                            user.getUserStatus()
+                                    )
+                                    .isNewUser(false)
+                                    .dogSetupRequired(false)
+                                    .build()
+                    )
+                    .build();
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
             throw new BusinessException(
                     ErrorCode.GOOGLE_LOGIN_FAILED
             );
         }
-
-        String email = googleUser.getEmail();
-        String nickname = googleUser.getName();
-        String providerId = googleUser.getSub();
-
-        User user = userRepository
-                .findByEmail(email)
-                .map(existingUser -> {
-
-                    if (existingUser.getProviderId() == null) {
-                        existingUser.updateProvider(
-                                AuthProvider.GOOGLE,
-                                providerId
-                        );
-
-                        return userRepository.save(existingUser);
-                    }
-
-                    return existingUser;
-                })
-                .orElseGet(() -> {
-
-                    User newUser = User.builder()
-                            .email(email)
-                            .nickname(nickname)
-                            .profileImageUrl(null)
-                            .authProvider(AuthProvider.GOOGLE)
-                            .providerId(providerId)
-                            .role(UserRole.USER)
-                            .userStatus("ACTIVE")
-                            .build();
-
-                    return userRepository.save(newUser);
-                });
-
-        String accessToken =
-                jwtProvider.createToken(user.getId());
-
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(null)
-                .expiresIn(3600L)
-                .user(
-                        LoginResponse.UserInfo.builder()
-                                .id(user.getId())
-                                .nickname(user.getNickname())
-                                .profileImageUrl(
-                                        user.getProfileImageUrl()
-                                )
-                                .userRole(
-                                        user.getRole().name()
-                                )
-                                .userStatus(
-                                        user.getUserStatus()
-                                )
-                                .isNewUser(false)
-                                .dogSetupRequired(false)
-                                .build()
-                )
-                .build();
     }
 }

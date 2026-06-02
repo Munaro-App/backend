@@ -4,8 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 
 public record GoogleLoginRequest(
 
-        @NotBlank(message = "Google ID Token은 필수입니다.")
-        String idToken
+        @NotBlank(message = "구글 액세스 토큰은 필수입니다.")
+        String accessToken
 
 ) {
 }
