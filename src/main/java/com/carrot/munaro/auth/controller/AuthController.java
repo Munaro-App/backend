@@ -1,6 +1,7 @@
 package com.carrot.munaro.auth.controller;
 
 import com.carrot.munaro.auth.dto.request.EmailSignUpRequest;
+import com.carrot.munaro.auth.dto.request.GoogleLoginRequest;
 import com.carrot.munaro.auth.dto.request.KakaoLoginRequest;
 import com.carrot.munaro.auth.dto.request.LoginRequest;
 import com.carrot.munaro.auth.dto.response.LoginResponse;
@@ -13,7 +14,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -43,6 +44,18 @@ public class AuthController {
 
         LoginResponse response =
                 authService.kakaoLogin(request);
+
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/google/login")
+    public ApiResponse<LoginResponse> googleLogin(
+            @Valid @RequestBody
+            GoogleLoginRequest request
+    ) {
+
+        LoginResponse response =
+                authService.googleLogin(request);
 
         return ApiResponse.ok(response);
     }

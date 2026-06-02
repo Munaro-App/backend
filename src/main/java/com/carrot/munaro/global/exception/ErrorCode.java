@@ -50,6 +50,18 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "AUTH_005",
             "카카오 사용자 정보를 불러올 수 없습니다."
+    ),
+
+    GOOGLE_LOGIN_FAILED(
+            HttpStatus.BAD_REQUEST,
+        "AUTH_006",
+                "구글 로그인에 실패했습니다."
+    ),
+
+    GOOGLE_USER_INFO_NOT_FOUND(
+            HttpStatus.BAD_REQUEST,
+        "AUTH_007",
+                "구글 사용자 정보를 불러올 수 없습니다."
     );
 
     private final HttpStatus status;
