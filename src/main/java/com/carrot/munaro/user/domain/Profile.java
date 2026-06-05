@@ -20,18 +20,12 @@ public class Profile {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(nullable = false, length = 20)
-    private String nickname;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AvatarType avatarType;
 
-    @Column(nullable = false, length = 500)
+    @Column(/*nullable = false,*/ length = 500)
     private String avatarValue;
-
-    @Column(length = 500)
-    private String profileImageUrl;
 
     @Column(length = 4)
     private String mbti;

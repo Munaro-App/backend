@@ -54,7 +54,7 @@ public class AuthService {
         Profile profile = Profile.builder()
                 .user(savedUser)
                 .avatarType(AvatarType.PRESET)
-                .avatarValue("default_profile")
+                .avatarValue("default_avatar")
                 .build();
 
         profileRepository.save(profile);
@@ -185,14 +185,11 @@ public class AuthService {
                                     LoginResponse.UserInfo.builder()
                                             .id(user.getId())
                                             .nickname(user.getNickname())
-                                            .profileImageUrl(
-                                                    user.getProfileImageUrl()
-                                            )
                                             .userRole(
                                                     user.getRole().name()
                                             )
                                             .userStatus(
-                                                    user.getUserStatus()
+                                                    user.getUserStatus().name()
                                             )
                                             .isNewUser(false)
                                             .dogSetupRequired(false)
@@ -244,7 +241,7 @@ public class AuthService {
                                             user.getRole().name()
                                     )
                                     .userStatus(
-                                            user.getUserStatus()
+                                            user.getUserStatus().name()
                                     )
                                     .isNewUser(false)
                                     .dogSetupRequired(false)
@@ -309,9 +306,6 @@ public class AuthService {
             String nickname =
                     googleUser.getName();
 
-            String profileImageUrl =
-                    googleUser.getPicture();
-
             User user =
                     userRepository
                             .findByProviderId(providerId)
@@ -321,14 +315,23 @@ public class AuthService {
                                         User.builder()
                                                 .email(email)
                                                 .nickname(nickname)
-                                                .profileImageUrl(profileImageUrl)
                                                 .authProvider(AuthProvider.GOOGLE)
                                                 .providerId(providerId)
                                                 .role(UserRole.USER)
-                                                .userStatus("ACTIVE")
+                                                .userStatus(UserStatus.ACTIVE)
                                                 .build();
 
-                                return userRepository.save(newUser);
+                                User savedUser = userRepository.save(newUser);
+
+                                Profile profile = Profile.builder()
+                                        .user(savedUser)
+                                        .avatarType(AvatarType.PRESET)
+                                        .avatarValue("default_avatar")
+                                        .build();
+
+                                profileRepository.save(profile);
+
+                                return savedUser;
                             });
 
             String accessToken =
@@ -344,14 +347,11 @@ public class AuthService {
                             LoginResponse.UserInfo.builder()
                                     .id(user.getId())
                                     .nickname(user.getNickname())
-                                    .profileImageUrl(
-                                            user.getProfileImageUrl()
-                                    )
                                     .userRole(
                                             user.getRole().name()
                                     )
                                     .userStatus(
-                                            user.getUserStatus()
+                                            user.getUserStatus().name()
                                     )
                                     .isNewUser(false)
                                     .dogSetupRequired(false)
