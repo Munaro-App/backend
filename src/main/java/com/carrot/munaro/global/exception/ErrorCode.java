@@ -81,6 +81,13 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "NICKNAME_ALREADY_EXISTS",
             "이미 사용 중인 닉네임입니다."
+    ),
+
+    // TouristSpot
+    TOURIST_SPOT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "TOURIST_SPOT_NOT_FOUND",
+            "관광지를 찾을 수 없습니다."
     );
 
     private final HttpStatus status;
