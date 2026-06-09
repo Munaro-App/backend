@@ -97,7 +97,6 @@ public class AuthService {
                                 .userRole(user.getRole().name())
                                 .userStatus(user.getUserStatus().name())
                                 .isNewUser(false)
-                                .dogSetupRequired(false)
                                 .build()
                 )
                 .build();
@@ -207,7 +206,6 @@ public class AuthService {
                                                     user.getUserStatus().name()
                                             )
                                             .isNewUser(false)
-                                            .dogSetupRequired(false)
                                             .build()
                             )
                             .build();
@@ -264,7 +262,6 @@ public class AuthService {
                                             user.getUserStatus().name()
                                     )
                                     .isNewUser(false)
-                                    .dogSetupRequired(false)
                                     .build()
                     )
                     .build();
@@ -375,7 +372,6 @@ public class AuthService {
                                             user.getUserStatus().name()
                                     )
                                     .isNewUser(false)
-                                    .dogSetupRequired(false)
                                     .build()
                     )
                     .build();

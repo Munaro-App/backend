@@ -21,6 +21,5 @@ public class LoginResponse {
         private String userRole;
         private String userStatus;
         private boolean isNewUser;
-        private boolean dogSetupRequired;
     }
 }
