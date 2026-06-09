@@ -79,12 +79,16 @@ public class AuthService {
         }
 
         String accessToken =
-                jwtProvider.createToken(user.getId());
+                jwtProvider.createAccessToken(user.getId());
 
+        String refreshToken =
+                jwtProvider.createRefreshToken(user.getId());
+
+        user.updateRefreshToken(refreshToken);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(null)
+                .refreshToken(refreshToken)
                 .expiresIn(3600L)
                 .user(
                         LoginResponse.UserInfo.builder()
@@ -143,6 +147,12 @@ public class AuthService {
             String providerId =
                     String.valueOf(kakaoUser.getId());
 
+            System.out.println("===== 카카오 유저 =====");
+            System.out.println("email = " + email);
+            System.out.println("nickname = " + nickname);
+            System.out.println("providerId = " + providerId);
+            System.out.println("======================");
+
             if (nickname == null) {
                 throw new BusinessException(
                         ErrorCode.KAKAO_USER_INFO_NOT_FOUND
@@ -175,11 +185,16 @@ public class AuthService {
                 if (user != null) {
 
                     String accessToken =
-                            jwtProvider.createToken(user.getId());
+                            jwtProvider.createAccessToken(user.getId());
+
+                    String refreshToken =
+                            jwtProvider.createRefreshToken(user.getId());
+
+                    user.updateRefreshToken(refreshToken);
 
                     return LoginResponse.builder()
                             .accessToken(accessToken)
-                            .refreshToken(null)
+                            .refreshToken(refreshToken)
                             .expiresIn(3600L)
                             .user(
                                     LoginResponse.UserInfo.builder()
@@ -227,11 +242,16 @@ public class AuthService {
                     });
 
             String accessToken =
-                    jwtProvider.createToken(user.getId());
+                    jwtProvider.createAccessToken(user.getId());
+
+            String refreshToken =
+                    jwtProvider.createRefreshToken(user.getId());
+
+            user.updateRefreshToken(refreshToken);
 
             return LoginResponse.builder()
                     .accessToken(accessToken)
-                    .refreshToken(null)
+                    .refreshToken(refreshToken)
                     .expiresIn(3600L)
                     .user(
                             LoginResponse.UserInfo.builder()
@@ -261,9 +281,7 @@ public class AuthService {
 
             e.printStackTrace();
 
-            throw new BusinessException(
-                    ErrorCode.KAKAO_LOGIN_FAILED
-            );
+            throw e;
         }
     }
 
@@ -335,13 +353,16 @@ public class AuthService {
                             });
 
             String accessToken =
-                    jwtProvider.createToken(
-                            user.getId()
-                    );
+                    jwtProvider.createAccessToken(user.getId());
+
+            String refreshToken =
+                    jwtProvider.createRefreshToken(user.getId());
+
+            user.updateRefreshToken(refreshToken);
 
             return LoginResponse.builder()
                     .accessToken(accessToken)
-                    .refreshToken(null)
+                    .refreshToken(refreshToken)
                     .expiresIn(3600L)
                     .user(
                             LoginResponse.UserInfo.builder()
@@ -368,4 +389,5 @@ public class AuthService {
             );
         }
     }
+
 }

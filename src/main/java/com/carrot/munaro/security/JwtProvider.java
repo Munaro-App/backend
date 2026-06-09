@@ -17,12 +17,33 @@ public class JwtProvider {
     private final long accessTokenExpiredTime =
             1000L * 60 * 60;
 
-    public String createToken(Long userId) {
+    private final long refreshTokenExpiredTime =
+            1000L * 60 * 60 * 24 * 14;
+
+    public String createAccessToken(Long userId) {
 
         Date now = new Date();
 
         Date expiredDate =
                 new Date(now.getTime() + accessTokenExpiredTime);
+
+        return Jwts.builder()
+                .setSubject(String.valueOf(userId))
+                .setIssuedAt(now)
+                .setExpiration(expiredDate)
+                .signWith(
+                        Keys.hmacShaKeyFor(secretKey.getBytes()),
+                        SignatureAlgorithm.HS256
+                )
+                .compact();
+    }
+
+    public String createRefreshToken(Long userId) {
+
+        Date now = new Date();
+
+        Date expiredDate =
+                new Date(now.getTime() + refreshTokenExpiredTime);
 
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
@@ -66,4 +87,5 @@ public class JwtProvider {
             return false;
         }
     }
+
 }

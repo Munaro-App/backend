@@ -46,6 +46,10 @@ public class SecurityConfig {
                                 "/",
                                 "/auth/**"
                         ).permitAll()
+
+                        .requestMatchers("/api/tourist-spots/**")
+                        .permitAll()
+
                         .anyRequest().authenticated()
                 )
 

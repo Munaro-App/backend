@@ -32,6 +32,9 @@ public class User {
     @Column(name = "provider_user_id")
     private String providerId;
 
+    @Column(length = 500)
+    private String refreshToken;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -50,5 +53,11 @@ public class User {
     ) {
         this.authProvider = provider;
         this.providerId = providerId;
+    }
+
+    public void updateRefreshToken(
+            String refreshToken
+    ) {
+        this.refreshToken = refreshToken;
     }
 }
