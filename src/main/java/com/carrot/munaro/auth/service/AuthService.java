@@ -386,4 +386,38 @@ public class AuthService {
         }
     }
 
+    private String ensureUniqueNickname(String base) {
+
+        String cleaned =
+                (base == null || base.isBlank())
+                        ? "user"
+                        : base;
+
+        if (cleaned.length() > 16) {
+            cleaned = cleaned.substring(0, 16);
+        }
+
+        if (cleaned.length() < 2) {
+            cleaned = cleaned + "00";
+        }
+
+        String candidate = cleaned;
+
+        for (int i = 0; i < 10; i++) {
+
+            if (!userRepository.existsByNickname(candidate)) {
+                return candidate;
+            }
+
+            candidate =
+                    cleaned +
+                            ThreadLocalRandom.current()
+                                    .nextInt(1000, 9999);
+        }
+
+        throw new BusinessException(
+                ErrorCode.USER_NICKNAME_DUPLICATED
+        );
+    }
+
 }
