@@ -62,6 +62,13 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
         "AUTH_007",
                 "구글 사용자 정보를 불러올 수 없습니다."
+    ),
+
+    // Tourist Spot
+    TOURIST_SPOT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "TOURIST_SPOT_001",
+            "관광지를 찾을 수 없습니다."
     );
 
     private final HttpStatus status;
