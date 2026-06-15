@@ -24,7 +24,10 @@ public class TouristSpotService {
     ) {
 
         Page<TouristSpotResponse> touristSpots =
-                findTouristSpots(keyword, pageable)
+                findTouristSpots(
+                        normalizeKeyword(keyword),
+                        pageable
+                )
                         .map(TouristSpotResponse::from);
 
         return TouristSpotPageResponse.from(touristSpots);
@@ -56,5 +59,14 @@ public class TouristSpotService {
                         keyword,
                         pageable
                 );
+    }
+
+    private String normalizeKeyword(String keyword) {
+
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+
+        return keyword.trim();
     }
 }

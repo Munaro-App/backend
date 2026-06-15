@@ -60,7 +60,7 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(
-                                "/api/tourist-spots/**"
+                                "/tourist-spots/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()
