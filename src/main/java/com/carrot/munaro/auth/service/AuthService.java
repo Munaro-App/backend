@@ -13,6 +13,7 @@ import com.carrot.munaro.security.JwtProvider;
 import com.carrot.munaro.user.domain.*;
 import com.carrot.munaro.user.repository.ProfileRepository;
 import com.carrot.munaro.user.repository.UserRepository;
+import com.carrot.munaro.user.repository.UserSocialAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final RestTemplate restTemplate;
     private final ProfileRepository profileRepository;
+    private final UserSocialAccountRepository userSocialAccountRepository;
 
     @Transactional
     public void signUp(EmailSignUpRequest request) {
@@ -43,7 +47,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .nickname(request.nickname())
+                .nickname(ensureUniqueNickname(request.nickname()))
                 .authProvider(AuthProvider.EMAIL)
                 .role(UserRole.USER)
                 .userStatus(UserStatus.ACTIVE)
@@ -149,105 +153,13 @@ public class AuthService {
                 );
             }
 
-            User user;
+            User user = findOrLinkKakaoUser(
+                    email,
+                    nickname,
+                    providerId
+            );
 
-            // 1. 이메일이 있으면 기존 이메일 계정 연동
-            if (email != null) {
-
-                user = userRepository
-                        .findByEmail(email)
-                        .map(existingUser -> {
-
-                            if (existingUser.getProviderId() == null) {
-
-                                existingUser.updateProvider(
-                                        AuthProvider.KAKAO,
-                                        providerId
-                                );
-
-                                return userRepository.save(existingUser);
-                            }
-
-                            return existingUser;
-                        })
-                        .orElse(null);
-
-                if (user != null) {
-
-                    String accessToken =
-                            jwtProvider.createToken(user.getId());
-
-                    return LoginResponse.builder()
-                            .accessToken(accessToken)
-                            .refreshToken(null)
-                            .expiresIn(3600L)
-                            .user(
-                                    LoginResponse.UserInfo.builder()
-                                            .id(user.getId())
-                                            .nickname(user.getNickname())
-                                            .userRole(
-                                                    user.getRole().name()
-                                            )
-                                            .userStatus(
-                                                    user.getUserStatus().name()
-                                            )
-                                            .isNewUser(false)
-                                            .dogSetupRequired(false)
-                                            .build()
-                            )
-                            .build();
-                }
-            }
-
-            // 2. providerId로 조회
-            user = userRepository
-                    .findByProviderId(providerId)
-                    .orElseGet(() -> {
-
-                        User newUser = User.builder()
-                                .email(email)
-                                .nickname(nickname)
-                                .authProvider(AuthProvider.KAKAO)
-                                .providerId(providerId)
-                                .role(UserRole.USER)
-                                .userStatus(UserStatus.ACTIVE)
-                                .build();
-
-                        User savedUser = userRepository.save(newUser);
-
-                        Profile profile = Profile.builder()
-                                .user(savedUser)
-                                .avatarType(AvatarType.PRESET)
-                                .avatarValue("default_avatar")
-                                .build();
-
-                        profileRepository.save(profile);
-
-                        return savedUser;
-                    });
-
-            String accessToken =
-                    jwtProvider.createToken(user.getId());
-
-            return LoginResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(null)
-                    .expiresIn(3600L)
-                    .user(
-                            LoginResponse.UserInfo.builder()
-                                    .id(user.getId())
-                                    .nickname(user.getNickname())
-                                    .userRole(
-                                            user.getRole().name()
-                                    )
-                                    .userStatus(
-                                            user.getUserStatus().name()
-                                    )
-                                    .isNewUser(false)
-                                    .dogSetupRequired(false)
-                                    .build()
-                    )
-                    .build();
+            return createLoginResponse(user, false);
 
         } catch (ResourceAccessException e) {
 
@@ -265,6 +177,128 @@ public class AuthService {
                     ErrorCode.KAKAO_LOGIN_FAILED
             );
         }
+    }
+
+    private User findOrLinkKakaoUser(
+            String email,
+            String nickname,
+            String providerId
+    ) {
+
+        return userSocialAccountRepository
+                .findByProviderAndProviderUserId(
+                        AuthProvider.KAKAO,
+                        providerId
+                )
+                .map(UserSocialAccount::getUser)
+                .orElseGet(() -> findUserByEmailOrCreateKakaoUser(
+                        email,
+                        nickname,
+                        providerId
+                ));
+    }
+
+    private User findUserByEmailOrCreateKakaoUser(
+            String email,
+            String nickname,
+            String providerId
+    ) {
+
+        User user = null;
+
+        if (email != null) {
+            user = userRepository.findByEmail(email)
+                    .orElse(null);
+        }
+
+        if (user == null) {
+            user = createKakaoUser(
+                    email,
+                    nickname,
+                    providerId
+            );
+        }
+
+        linkSocialAccountIfAbsent(
+                user,
+                AuthProvider.KAKAO,
+                providerId
+        );
+
+        return user;
+    }
+
+    private User createKakaoUser(
+            String email,
+            String nickname,
+            String providerId
+    ) {
+
+        User newUser = User.builder()
+                .email(email)
+                .nickname(ensureUniqueNickname(nickname))
+                .authProvider(AuthProvider.KAKAO)
+                .providerId(providerId)
+                .role(UserRole.USER)
+                .userStatus(UserStatus.ACTIVE)
+                .build();
+
+        User savedUser = userRepository.save(newUser);
+
+        Profile profile = Profile.builder()
+                .user(savedUser)
+                .avatarType(AvatarType.PRESET)
+                .avatarValue("default_avatar")
+                .build();
+
+        profileRepository.save(profile);
+
+        return savedUser;
+    }
+
+    private void linkSocialAccountIfAbsent(
+            User user,
+            AuthProvider provider,
+            String providerId
+    ) {
+
+        if (userSocialAccountRepository
+                .existsByProviderAndProviderUserId(provider, providerId)) {
+            return;
+        }
+
+        userSocialAccountRepository.save(
+                UserSocialAccount.builder()
+                        .user(user)
+                        .provider(provider)
+                        .providerUserId(providerId)
+                        .build()
+        );
+    }
+
+    private LoginResponse createLoginResponse(
+            User user,
+            boolean isNewUser
+    ) {
+
+        String accessToken =
+                jwtProvider.createToken(user.getId());
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(null)
+                .expiresIn(3600L)
+                .user(
+                        LoginResponse.UserInfo.builder()
+                                .id(user.getId())
+                                .nickname(user.getNickname())
+                                .userRole(user.getRole().name())
+                                .userStatus(user.getUserStatus().name())
+                                .isNewUser(isNewUser)
+                                .dogSetupRequired(false)
+                                .build()
+                )
+                .build();
     }
 
     @Transactional
@@ -314,7 +348,11 @@ public class AuthService {
                                 User newUser =
                                         User.builder()
                                                 .email(email)
-                                                .nickname(nickname)
+                                                .nickname(
+                                                        ensureUniqueNickname(
+                                                                nickname
+                                                        )
+                                                )
                                                 .authProvider(AuthProvider.GOOGLE)
                                                 .providerId(providerId)
                                                 .role(UserRole.USER)
@@ -367,5 +405,42 @@ public class AuthService {
                     ErrorCode.GOOGLE_LOGIN_FAILED
             );
         }
+    }
+
+    private String ensureUniqueNickname(String base) {
+
+        String cleaned =
+                (base == null || base.isBlank()) ? "user" : base.trim();
+
+        if (cleaned.length() > 16) {
+            cleaned = cleaned.substring(0, 16);
+        }
+
+        if (cleaned.length() < 2) {
+            cleaned = cleaned + "00";
+        }
+
+        String candidate = cleaned;
+
+        for (int i = 0; i < 10; i++) {
+            if (!userRepository.existsByNickname(candidate)) {
+                return candidate;
+            }
+
+            String suffix =
+                    String.valueOf(
+                            ThreadLocalRandom.current()
+                                    .nextInt(1000, 10000)
+                    );
+
+            int baseMaxLength = Math.max(2, 16 - suffix.length());
+            String prefix = cleaned.length() > baseMaxLength
+                    ? cleaned.substring(0, baseMaxLength)
+                    : cleaned;
+
+            candidate = prefix + suffix;
+        }
+
+        throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
     }
 }
