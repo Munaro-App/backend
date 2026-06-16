@@ -4,6 +4,8 @@ import com.carrot.munaro.user.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.OffsetDateTime;
+
 @Entity
 @Getter
 @Builder
@@ -25,10 +27,16 @@ public class Score {
     @JoinColumn(name = "season_id", nullable = false)
     private Season season;
 
-    @Column(nullable = false)
-    private Integer score;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ScoreSource source;
+
+    @Column(name = "submission_id")
+    private Long submissionId;
+
+    @Column(nullable = false)
+    private Integer points;
+
+    @Column(nullable = false)
+    private OffsetDateTime createdAt;
 }

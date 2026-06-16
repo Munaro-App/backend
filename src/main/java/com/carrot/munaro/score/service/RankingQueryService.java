@@ -4,8 +4,8 @@ import com.carrot.munaro.score.domain.Season;
 import com.carrot.munaro.score.dto.response.MyRankingResponse;
 import com.carrot.munaro.score.dto.response.RankingItemResponse;
 import com.carrot.munaro.score.dto.response.RankingPageResponse;
+import com.carrot.munaro.score.repository.RankingRepository;
 import com.carrot.munaro.score.repository.ScoreRepository;
-import com.carrot.munaro.score.repository.SeasonRankingSnapshotRepository;
 import com.carrot.munaro.score.repository.projection.RankingRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -21,7 +21,7 @@ public class RankingQueryService {
 
     private final SeasonService seasonService;
     private final ScoreRepository scoreRepository;
-    private final SeasonRankingSnapshotRepository snapshotRepository;
+    private final RankingRepository rankingRepository;
 
     @Transactional(readOnly = true)
     public RankingPageResponse getCurrentSeasonRanking(
@@ -73,8 +73,8 @@ public class RankingQueryService {
         List<RankingRow> rows;
         long totalElements;
 
-        if (season.isActive()
-                || !snapshotRepository.existsBySeasonId(season.getId())) {
+        if (season.isActive(java.time.OffsetDateTime.now())
+                || !rankingRepository.existsBySeasonId(season.getId())) {
             rows = scoreRepository.findRankingRows(
                     season.getId(),
                     normalizedSize,
@@ -84,11 +84,11 @@ public class RankingQueryService {
         } else {
             Pageable pageable =
                     PageRequest.of(normalizedPage, normalizedSize);
-            rows = snapshotRepository.findRankingRowsBySeasonId(
+            rows = rankingRepository.findRankingRowsBySeasonId(
                     season.getId(),
                     pageable
             );
-            totalElements = snapshotRepository.countBySeasonId(season.getId());
+            totalElements = rankingRepository.countBySeasonId(season.getId());
         }
 
         return new RankingPageResponse(

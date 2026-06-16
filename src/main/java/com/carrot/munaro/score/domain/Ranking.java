@@ -12,19 +12,19 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-        name = "season_ranking_snapshots",
+        name = "rankings",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_season_ranking_snapshot_season_user",
+                        name = "uk_rankings_season_user",
                         columnNames = {"season_id", "user_id"}
                 )
         }
 )
-public class SeasonRankingSnapshot {
+public class Ranking {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "season_ranking_snapshot_id")
+    @Column(name = "ranking_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -41,7 +41,7 @@ public class SeasonRankingSnapshot {
     @Column(nullable = false)
     private Integer score;
 
-    @Column(name = "ranking", nullable = false)
+    @Column(name = "rank", nullable = false)
     private Integer rank;
 
     @Column(nullable = false)

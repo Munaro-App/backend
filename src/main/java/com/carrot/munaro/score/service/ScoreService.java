@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ScoreService {
@@ -36,8 +38,9 @@ public class ScoreService {
                 Score.builder()
                         .user(user)
                         .season(season)
-                        .score(score)
                         .source(source)
+                        .points(score)
+                        .createdAt(OffsetDateTime.now())
                         .build()
         );
     }

@@ -10,9 +10,10 @@ import java.util.Optional;
 public interface SeasonRepository
         extends JpaRepository<Season, Long> {
 
-    Optional<Season> findByActiveTrue();
+    Optional<Season> findFirstByStartedAtLessThanEqualAndEndedAtGreaterThan(
+            OffsetDateTime startedAt,
+            OffsetDateTime endedAt
+    );
 
-    Optional<Season> findBySeasonName(String seasonName);
-
-    List<Season> findByActiveTrueAndEndedAtLessThanEqual(OffsetDateTime now);
+    List<Season> findByEndedAtLessThanEqual(OffsetDateTime now);
 }

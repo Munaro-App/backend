@@ -9,8 +9,7 @@ public record SeasonResponse(
         String seasonName,
         OffsetDateTime startedAt,
         OffsetDateTime endedAt,
-        boolean active,
-        OffsetDateTime closedAt
+        OffsetDateTime createdAt
 ) {
 
     public static SeasonResponse from(Season season) {
@@ -19,8 +18,7 @@ public record SeasonResponse(
                 season.getSeasonName(),
                 season.getStartedAt(),
                 season.getEndedAt(),
-                season.isActive(),
-                season.getClosedAt()
+                season.getCreatedAt()
         );
     }
 }

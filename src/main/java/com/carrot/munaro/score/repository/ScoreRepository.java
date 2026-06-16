@@ -22,9 +22,9 @@ public interface ScoreRepository
                         SELECT
                             u.user_id,
                             u.nickname,
-                            COALESCE(SUM(s.score), 0)::int AS score,
+                            COALESCE(SUM(s.points), 0)::int AS score,
                             RANK() OVER (
-                                ORDER BY COALESCE(SUM(s.score), 0) DESC, u.user_id ASC
+                                ORDER BY COALESCE(SUM(s.points), 0) DESC, u.user_id ASC
                             )::int AS ranking
                         FROM scores s
                         JOIN users u ON u.user_id = s.user_id
@@ -67,9 +67,9 @@ public interface ScoreRepository
                         SELECT
                             u.user_id,
                             u.nickname,
-                            COALESCE(SUM(s.score), 0)::int AS score,
+                            COALESCE(SUM(s.points), 0)::int AS score,
                             RANK() OVER (
-                                ORDER BY COALESCE(SUM(s.score), 0) DESC, u.user_id ASC
+                                ORDER BY COALESCE(SUM(s.points), 0) DESC, u.user_id ASC
                             )::int AS ranking
                         FROM scores s
                         JOIN users u ON u.user_id = s.user_id

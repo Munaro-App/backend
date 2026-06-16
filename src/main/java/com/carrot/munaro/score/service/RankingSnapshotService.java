@@ -1,10 +1,10 @@
 package com.carrot.munaro.score.service;
 
+import com.carrot.munaro.score.domain.Ranking;
 import com.carrot.munaro.score.domain.Season;
-import com.carrot.munaro.score.domain.SeasonRankingSnapshot;
 import com.carrot.munaro.score.domain.SeasonWinner;
+import com.carrot.munaro.score.repository.RankingRepository;
 import com.carrot.munaro.score.repository.ScoreRepository;
-import com.carrot.munaro.score.repository.SeasonRankingSnapshotRepository;
 import com.carrot.munaro.score.repository.SeasonWinnerRepository;
 import com.carrot.munaro.score.repository.projection.RankingRow;
 import com.carrot.munaro.user.domain.User;
@@ -24,7 +24,7 @@ public class RankingSnapshotService {
 
     private final ScoreRepository scoreRepository;
     private final UserRepository userRepository;
-    private final SeasonRankingSnapshotRepository snapshotRepository;
+    private final RankingRepository rankingRepository;
     private final SeasonWinnerRepository winnerRepository;
 
     @Transactional
@@ -33,7 +33,7 @@ public class RankingSnapshotService {
             OffsetDateTime snapshottedAt
     ) {
 
-        if (snapshotRepository.existsBySeasonId(season.getId())) {
+        if (rankingRepository.existsBySeasonId(season.getId())) {
             return;
         }
 
@@ -57,9 +57,9 @@ public class RankingSnapshotService {
                 winnerSaved = true;
             }
 
-            List<SeasonRankingSnapshot> snapshots =
+            List<Ranking> rankings =
                     rankingRows.stream()
-                            .map(row -> SeasonRankingSnapshot.builder()
+                            .map(row -> Ranking.builder()
                                     .season(season)
                                     .user(getUserReference(row.getUserId()))
                                     .nickname(row.getNickname())
@@ -69,7 +69,7 @@ public class RankingSnapshotService {
                                     .build())
                             .toList();
 
-            snapshotRepository.saveAll(snapshots);
+            rankingRepository.saveAll(rankings);
             offset += SNAPSHOT_BATCH_SIZE;
         }
     }

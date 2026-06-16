@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -19,6 +20,7 @@ import java.util.List;
 public class SeasonService {
 
     private static final ZoneId SEASON_ZONE = ZoneId.of("Asia/Seoul");
+    private static final YearMonth FIRST_SEASON_MONTH = YearMonth.of(2026, 6);
 
     private final SeasonRepository seasonRepository;
     private final RankingSnapshotService rankingSnapshotService;
@@ -35,7 +37,13 @@ public class SeasonService {
     @Transactional
     public Season getOrCreateCurrentSeason() {
 
-        return seasonRepository.findByActiveTrue()
+        OffsetDateTime now = OffsetDateTime.now(SEASON_ZONE);
+
+        return seasonRepository
+                .findFirstByStartedAtLessThanEqualAndEndedAtGreaterThan(
+                        now,
+                        now
+                )
                 .orElseGet(this::createCurrentMonthSeason);
     }
 
@@ -51,39 +59,52 @@ public class SeasonService {
 
         OffsetDateTime now = OffsetDateTime.now(SEASON_ZONE);
         List<Season> expiredSeasons =
-                seasonRepository.findByActiveTrueAndEndedAtLessThanEqual(now);
+                seasonRepository.findByEndedAtLessThanEqual(now);
 
         for (Season season : expiredSeasons) {
             rankingSnapshotService.snapshotSeason(season, now);
-            season.close(now);
+            season.close();
         }
 
-        seasonRepository.saveAll(expiredSeasons);
         getOrCreateCurrentSeason();
     }
 
     private Season createCurrentMonthSeason() {
 
         YearMonth currentMonth = YearMonth.now(SEASON_ZONE);
-        String seasonName = currentMonth + " 시즌";
+        String seasonName = createSeasonName(currentMonth);
 
-        return seasonRepository.findBySeasonName(seasonName)
-                .orElseGet(() -> seasonRepository.save(
-                        Season.builder()
-                                .seasonName(seasonName)
-                                .startedAt(
-                                        currentMonth.atDay(1)
-                                                .atStartOfDay(SEASON_ZONE)
-                                                .toOffsetDateTime()
-                                )
-                                .endedAt(
-                                        currentMonth.plusMonths(1)
-                                                .atDay(1)
-                                                .atStartOfDay(SEASON_ZONE)
-                                                .toOffsetDateTime()
-                                )
-                                .active(true)
-                                .build()
-                ));
+        return seasonRepository.save(
+                Season.builder()
+                        .seasonName(seasonName)
+                        .startedAt(
+                                currentMonth.atDay(1)
+                                        .atStartOfDay(SEASON_ZONE)
+                                        .toOffsetDateTime()
+                        )
+                        .endedAt(
+                                currentMonth.plusMonths(1)
+                                        .atDay(1)
+                                        .atStartOfDay(SEASON_ZONE)
+                                        .toOffsetDateTime()
+                        )
+                        .createdAt(OffsetDateTime.now(SEASON_ZONE))
+                        .build()
+        );
+    }
+
+    private String createSeasonName(YearMonth seasonMonth) {
+
+        long seasonNumber =
+                ChronoUnit.MONTHS.between(
+                        FIRST_SEASON_MONTH,
+                        seasonMonth
+                ) + 1;
+
+        if (seasonNumber < 1) {
+            seasonNumber = 1;
+        }
+
+        return "시즌 " + seasonNumber;
     }
 }

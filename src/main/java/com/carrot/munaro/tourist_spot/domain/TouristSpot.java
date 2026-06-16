@@ -16,7 +16,7 @@ public class TouristSpot {
     @Column(name = "tourist_spot_id")
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String name;
 
     @Column(length = 500)
