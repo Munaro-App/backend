@@ -40,11 +40,14 @@ public class OpenAIQuizService {
             );
         }
 
+        String prompt = buildPrompt(touristSpot);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> request =
+                new HttpEntity<>(buildRequestBody(prompt), headers);
                 new HttpEntity<>(
                         buildRequestBody(buildPrompt(touristSpot)),
                         headers

@@ -6,6 +6,7 @@ import com.carrot.munaro.quiz.domain.*;
 import com.carrot.munaro.quiz.dto.response.QuizGenerationResponse;
 import com.carrot.munaro.quiz.dto.response.QuizGenerationResultResponse;
 import com.carrot.munaro.quiz.repository.QuizChoiceRepository;
+import com.carrot.munaro.quiz.repository.QuizGenerationLogRepository;
 import com.carrot.munaro.quiz.repository.QuizQuestionRepository;
 import com.carrot.munaro.quiz.repository.QuizRepository;
 import com.carrot.munaro.tourist_spot.domain.TouristSpot;
@@ -14,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -29,6 +30,7 @@ public class QuizGenerationService {
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizChoiceRepository quizChoiceRepository;
+    private final QuizGenerationLogRepository generationLogRepository;
     private final OpenAIQuizService openAIQuizService;
     private final QuizGenerationLogService quizGenerationLogService;
 
@@ -53,6 +55,7 @@ public class QuizGenerationService {
             QuizGenerationResponse response =
                     generateWithRetry(touristSpot);
             Quiz quiz = saveQuiz(touristSpot, response);
+
             quizGenerationLogService.saveLog(
                     touristSpot,
                     QuizGenerationStatus.SUCCESS,

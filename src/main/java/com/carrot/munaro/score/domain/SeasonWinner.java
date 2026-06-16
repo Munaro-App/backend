@@ -11,32 +11,28 @@ import java.time.OffsetDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "scores")
-public class Score {
+@Table(name = "season_winners")
+public class SeasonWinner {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "score_id")
+    @Column(name = "season_winner_id")
     private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "season_id", nullable = false, unique = true)
+    private Season season;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "season_id", nullable = false)
-    private Season season;
-
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ScoreSource source;
-
-    @Column(name = "submission_id")
-    private Long submissionId;
+    private String nickname;
 
     @Column(nullable = false)
-    private Integer points;
+    private Integer score;
 
     @Column(nullable = false)
-    private OffsetDateTime createdAt;
+    private OffsetDateTime decidedAt;
 }

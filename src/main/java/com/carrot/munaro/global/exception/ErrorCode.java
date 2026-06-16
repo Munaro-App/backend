@@ -109,6 +109,13 @@ public enum ErrorCode {
             "관광지를 찾을 수 없습니다."
     ),
 
+    // Season
+    SEASON_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "SEASON_NOT_FOUND",
+            "시즌을 찾을 수 없습니다."
+    ),
+
     // Quiz
     QUIZ_GENERATION_FAILED(
             HttpStatus.INTERNAL_SERVER_ERROR,

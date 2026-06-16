@@ -47,15 +47,20 @@ public class SecurityConfig {
                                 "/",
                                 "/auth/**"
                         ).permitAll()
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/tourist-spots/nearby",
-                                "/tourist-spots/*"
-                        ).permitAll()
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/admin/quizzes/generate/**"
-                        ).permitAll()
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/seasons/**",
+                                        "/rankings/current",
+                                        "/rankings/seasons/**",
+                                        "/tourist-spots/nearby",
+                                        "/tourist-spots/*"
+                                ).permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/admin/seasons/rollover",
+                                        "/admin/quizzes/generate/**"
+                                ).permitAll()
                         .anyRequest().authenticated()
                 )
 
