@@ -54,6 +54,11 @@ public class SecurityConfig {
                                 "/rankings/current",
                                 "/rankings/seasons/**"
                         ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/admin/seasons/rollover"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
 

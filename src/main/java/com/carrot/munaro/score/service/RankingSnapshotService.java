@@ -28,16 +28,17 @@ public class RankingSnapshotService {
     private final SeasonWinnerRepository winnerRepository;
 
     @Transactional
-    public void snapshotSeason(
+    public int snapshotSeason(
             Season season,
             OffsetDateTime snapshottedAt
     ) {
 
         if (rankingRepository.existsBySeasonId(season.getId())) {
-            return;
+            return -1;
         }
 
         int offset = 0;
+        int savedRankingCount = 0;
         boolean winnerSaved = false;
 
         while (true) {
@@ -70,8 +71,11 @@ public class RankingSnapshotService {
                             .toList();
 
             rankingRepository.saveAll(rankings);
+            savedRankingCount += rankings.size();
             offset += SNAPSHOT_BATCH_SIZE;
         }
+
+        return savedRankingCount;
     }
 
     private void saveWinner(

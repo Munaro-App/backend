@@ -3,6 +3,7 @@ package com.carrot.munaro.score.service;
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.score.domain.Season;
+import com.carrot.munaro.score.dto.response.SeasonRolloverResponse;
 import com.carrot.munaro.score.dto.response.SeasonResponse;
 import com.carrot.munaro.score.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,18 +56,37 @@ public class SeasonService {
     }
 
     @Transactional
-    public void rolloverExpiredSeasons() {
+    public SeasonRolloverResponse rolloverExpiredSeasons() {
 
         OffsetDateTime now = OffsetDateTime.now(SEASON_ZONE);
         List<Season> expiredSeasons =
                 seasonRepository.findByEndedAtLessThanEqual(now);
 
+        int savedRankingCount = 0;
+        int skippedSeasonCount = 0;
+
         for (Season season : expiredSeasons) {
-            rankingSnapshotService.snapshotSeason(season, now);
+            int snapshotCount = rankingSnapshotService.snapshotSeason(
+                    season,
+                    now
+            );
+
+            if (snapshotCount < 0) {
+                skippedSeasonCount++;
+            } else {
+                savedRankingCount += snapshotCount;
+            }
+
             season.close();
         }
 
         getOrCreateCurrentSeason();
+
+        return new SeasonRolloverResponse(
+                expiredSeasons.size(),
+                skippedSeasonCount,
+                savedRankingCount
+        );
     }
 
     private Season createCurrentMonthSeason() {

@@ -14,10 +14,10 @@ public interface ScoreRepository
     @Query(
             value = """
                     SELECT
-                        ranked.user_id AS userId,
-                        ranked.nickname AS nickname,
-                        ranked.score AS score,
-                        ranked.ranking AS rank
+                        ranked.user_id AS "userId",
+                        ranked.nickname AS "nickname",
+                        ranked.score AS "score",
+                        ranked.ranking AS "rank"
                     FROM (
                         SELECT
                             u.user_id,
@@ -59,10 +59,10 @@ public interface ScoreRepository
     @Query(
             value = """
                     SELECT
-                        ranked.user_id AS userId,
-                        ranked.nickname AS nickname,
-                        ranked.score AS score,
-                        ranked.ranking AS rank
+                        ranked.user_id AS "userId",
+                        ranked.nickname AS "nickname",
+                        ranked.score AS "score",
+                        ranked.ranking AS "rank"
                     FROM (
                         SELECT
                             u.user_id,
