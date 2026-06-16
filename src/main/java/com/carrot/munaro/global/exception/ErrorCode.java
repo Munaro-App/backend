@@ -88,6 +88,13 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "TOURIST_SPOT_NOT_FOUND",
             "관광지를 찾을 수 없습니다."
+    ),
+
+    // Quiz
+    QUIZ_GENERATION_FAILED(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "QUIZ_GENERATION_FAILED",
+            "퀴즈 생성에 실패했습니다."
     );
 
     private final HttpStatus status;
