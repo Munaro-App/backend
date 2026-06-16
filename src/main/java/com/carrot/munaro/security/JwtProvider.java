@@ -17,15 +17,35 @@ public class JwtProvider {
     private final long accessTokenExpiredTime =
             1000L * 60 * 60;
 
+    private final long refreshTokenExpiredTime =
+            1000L * 60 * 60 * 24 * 14;
+
     public String createToken(Long userId) {
+        return createAccessToken(userId);
+    }
+
+    public String createAccessToken(Long userId) {
+        return createToken(userId, accessTokenExpiredTime, "access");
+    }
+
+    public String createRefreshToken(Long userId) {
+        return createToken(userId, refreshTokenExpiredTime, "refresh");
+    }
+
+    private String createToken(
+            Long userId,
+            long expiredTime,
+            String tokenType
+    ) {
 
         Date now = new Date();
 
         Date expiredDate =
-                new Date(now.getTime() + accessTokenExpiredTime);
+                new Date(now.getTime() + expiredTime);
 
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .claim("type", tokenType)
                 .setIssuedAt(now)
                 .setExpiration(expiredDate)
                 .signWith(

@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -38,14 +39,16 @@ public class AuthService {
     @Transactional
     public void signUp(EmailSignUpRequest request) {
 
-        if (userRepository.existsByEmail(request.email())) {
+        String email = normalizeEmail(request.email());
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new BusinessException(
                     ErrorCode.EMAIL_ALREADY_EXISTS
             );
         }
 
         User user = User.builder()
-                .email(request.email())
+                .email(email)
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(ensureUniqueNickname(request.nickname()))
                 .authProvider(AuthProvider.EMAIL)
@@ -67,7 +70,9 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailIgnoreCase(
+                        normalizeEmail(request.email())
+                )
                 .orElseThrow(() ->
                         new BusinessException(
                                 ErrorCode.INVALID_LOGIN
@@ -83,12 +88,15 @@ public class AuthService {
         }
 
         String accessToken =
-                jwtProvider.createToken(user.getId());
+                jwtProvider.createAccessToken(user.getId());
+
+        String refreshToken =
+                jwtProvider.createRefreshToken(user.getId());
 
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(null)
+                .refreshToken(refreshToken)
                 .expiresIn(3600L)
                 .user(
                         LoginResponse.UserInfo.builder()
@@ -136,12 +144,18 @@ public class AuthService {
             }
 
             String email =
-                    kakaoUser.getKakao_account().getEmail();
+                    normalizeEmail(kakaoUser.getKakao_account().getEmail());
 
             String nickname =
                     kakaoUser.getKakao_account()
                             .getProfile()
                             .getNickname();
+
+            if (kakaoUser.getId() == null) {
+                throw new BusinessException(
+                        ErrorCode.KAKAO_USER_INFO_NOT_FOUND
+                );
+            }
 
             String providerId =
                     String.valueOf(kakaoUser.getId());
@@ -163,6 +177,9 @@ public class AuthService {
                     result.user(),
                     result.isNewUser()
             );
+
+        } catch (BusinessException e) {
+            throw e;
 
         } catch (ResourceAccessException e) {
 
@@ -198,17 +215,15 @@ public class AuthService {
                         account.getUser(),
                         false
                 ))
-                .orElseGet(() -> findUserByEmailOrCreateSocialUser(
+                .orElseGet(() -> findUserByProviderOrCreateSocialUser(
                         provider,
-                        email,
                         nickname,
                         providerId
                 ));
     }
 
-    private LinkedUserResult findUserByEmailOrCreateSocialUser(
+    private LinkedUserResult findUserByProviderOrCreateSocialUser(
             AuthProvider provider,
-            String email,
             String nickname,
             String providerId
     ) {
@@ -216,15 +231,15 @@ public class AuthService {
         User user = null;
         boolean isNewUser = false;
 
-        if (email != null) {
-            user = userRepository.findByEmail(email)
+        if (providerId != null && !providerId.isBlank()) {
+            user = userRepository
+                    .findByAuthProviderAndProviderId(provider, providerId)
                     .orElse(null);
         }
 
         if (user == null) {
             user = createSocialUser(
                     provider,
-                    email,
                     nickname,
                     providerId
             );
@@ -242,13 +257,11 @@ public class AuthService {
 
     private User createSocialUser(
             AuthProvider provider,
-            String email,
             String nickname,
             String providerId
     ) {
 
         User newUser = User.builder()
-                .email(email)
                 .nickname(ensureUniqueNickname(nickname))
                 .authProvider(provider)
                 .providerId(providerId)
@@ -295,11 +308,14 @@ public class AuthService {
     ) {
 
         String accessToken =
-                jwtProvider.createToken(user.getId());
+                jwtProvider.createAccessToken(user.getId());
+
+        String refreshToken =
+                jwtProvider.createRefreshToken(user.getId());
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(null)
+                .refreshToken(refreshToken)
                 .expiresIn(3600L)
                 .user(
                         LoginResponse.UserInfo.builder()
@@ -347,10 +363,16 @@ public class AuthService {
                     googleUser.getSub();
 
             String email =
-                    googleUser.getEmail();
+                    normalizeEmail(googleUser.getEmail());
 
             String nickname =
                     googleUser.getName();
+
+            if (providerId == null || providerId.isBlank()) {
+                throw new BusinessException(
+                        ErrorCode.GOOGLE_USER_INFO_NOT_FOUND
+                );
+            }
 
             LinkedUserResult result = findOrLinkSocialUser(
                     AuthProvider.GOOGLE,
@@ -363,6 +385,9 @@ public class AuthService {
                     result.user(),
                     result.isNewUser()
             );
+
+        } catch (BusinessException e) {
+            throw e;
 
         } catch (Exception e) {
 
@@ -420,6 +445,15 @@ public class AuthService {
         }
 
         throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+    }
+
+    private String normalizeEmail(String email) {
+
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private record LinkedUserResult(

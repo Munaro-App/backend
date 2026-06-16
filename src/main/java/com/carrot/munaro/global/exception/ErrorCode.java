@@ -52,6 +52,12 @@ public enum ErrorCode {
             "카카오 사용자 정보를 불러올 수 없습니다."
     ),
 
+    KAKAO_EMAIL_NOT_PROVIDED(
+            HttpStatus.BAD_REQUEST,
+            "KAKAO_EMAIL_NOT_PROVIDED",
+            "카카오 계정의 이메일 제공 동의가 필요합니다."
+    ),
+
     GOOGLE_LOGIN_FAILED(
             HttpStatus.BAD_REQUEST,
             "GOOGLE_LOGIN_FAILED",
