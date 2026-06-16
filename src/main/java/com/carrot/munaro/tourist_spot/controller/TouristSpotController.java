@@ -45,6 +45,31 @@ public class TouristSpotController {
         );
     }
 
+    @GetMapping("/nearby")
+    public ApiResponse<TouristSpotPageResponse> getNearbyTouristSpots(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(defaultValue = "10") Double radiusKm,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size
+    ) {
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size
+                );
+
+        return ApiResponse.ok(
+                touristSpotService.getNearbyTouristSpots(
+                        latitude,
+                        longitude,
+                        radiusKm,
+                        pageable
+                )
+        );
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<TouristSpotResponse> getTouristSpot(
             @PathVariable Long id

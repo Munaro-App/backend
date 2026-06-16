@@ -44,6 +44,31 @@ public class TouristSpotService {
                 );
     }
 
+    public TouristSpotPageResponse getNearbyTouristSpots(
+            Double latitude,
+            Double longitude,
+            Double radiusKm,
+            Pageable pageable
+    ) {
+
+        validateLocation(
+                latitude,
+                longitude,
+                radiusKm
+        );
+
+        Page<TouristSpotResponse> touristSpots =
+                touristSpotRepository.findNearby(
+                                latitude,
+                                longitude,
+                                radiusKm,
+                                pageable
+                        )
+                        .map(TouristSpotResponse::from);
+
+        return TouristSpotPageResponse.from(touristSpots);
+    }
+
     private Page<com.carrot.munaro.tourist_spot.domain.TouristSpot> findTouristSpots(
             String keyword,
             Pageable pageable
@@ -68,5 +93,28 @@ public class TouristSpotService {
         }
 
         return keyword.trim();
+    }
+
+    private void validateLocation(
+            Double latitude,
+            Double longitude,
+            Double radiusKm
+    ) {
+
+        if (latitude == null || longitude == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (latitude < -90 || latitude > 90) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (longitude < -180 || longitude > 180) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (radiusKm == null || radiusKm <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
     }
 }
