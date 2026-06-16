@@ -51,4 +51,12 @@ public class User {
         this.authProvider = provider;
         this.providerId = providerId;
     }
+
+    public void withdraw() {
+        this.userStatus = UserStatus.DELETED;
+        this.email = "deleted_user_" + id + "@deleted.local";
+        this.nickname = "deleted_" + id;
+        this.password = null;
+        this.providerId = null;
+    }
 }

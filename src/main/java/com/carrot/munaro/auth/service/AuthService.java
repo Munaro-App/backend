@@ -97,7 +97,6 @@ public class AuthService {
                                 .userRole(user.getRole().name())
                                 .userStatus(user.getUserStatus().name())
                                 .isNewUser(false)
-                                .dogSetupRequired(false)
                                 .build()
                 )
                 .build();
@@ -153,13 +152,17 @@ public class AuthService {
                 );
             }
 
-            User user = findOrLinkKakaoUser(
+            LinkedUserResult result = findOrLinkSocialUser(
+                    AuthProvider.KAKAO,
                     email,
                     nickname,
                     providerId
             );
 
-            return createLoginResponse(user, false);
+            return createLoginResponse(
+                    result.user(),
+                    result.isNewUser()
+            );
 
         } catch (ResourceAccessException e) {
 
@@ -179,7 +182,8 @@ public class AuthService {
         }
     }
 
-    private User findOrLinkKakaoUser(
+    private LinkedUserResult findOrLinkSocialUser(
+            AuthProvider provider,
             String email,
             String nickname,
             String providerId
@@ -187,24 +191,30 @@ public class AuthService {
 
         return userSocialAccountRepository
                 .findByProviderAndProviderUserId(
-                        AuthProvider.KAKAO,
+                        provider,
                         providerId
                 )
-                .map(UserSocialAccount::getUser)
-                .orElseGet(() -> findUserByEmailOrCreateKakaoUser(
+                .map(account -> new LinkedUserResult(
+                        account.getUser(),
+                        false
+                ))
+                .orElseGet(() -> findUserByEmailOrCreateSocialUser(
+                        provider,
                         email,
                         nickname,
                         providerId
                 ));
     }
 
-    private User findUserByEmailOrCreateKakaoUser(
+    private LinkedUserResult findUserByEmailOrCreateSocialUser(
+            AuthProvider provider,
             String email,
             String nickname,
             String providerId
     ) {
 
         User user = null;
+        boolean isNewUser = false;
 
         if (email != null) {
             user = userRepository.findByEmail(email)
@@ -212,23 +222,26 @@ public class AuthService {
         }
 
         if (user == null) {
-            user = createKakaoUser(
+            user = createSocialUser(
+                    provider,
                     email,
                     nickname,
                     providerId
             );
+            isNewUser = true;
         }
 
         linkSocialAccountIfAbsent(
                 user,
-                AuthProvider.KAKAO,
+                provider,
                 providerId
         );
 
-        return user;
+        return new LinkedUserResult(user, isNewUser);
     }
 
-    private User createKakaoUser(
+    private User createSocialUser(
+            AuthProvider provider,
             String email,
             String nickname,
             String providerId
@@ -237,7 +250,7 @@ public class AuthService {
         User newUser = User.builder()
                 .email(email)
                 .nickname(ensureUniqueNickname(nickname))
-                .authProvider(AuthProvider.KAKAO)
+                .authProvider(provider)
                 .providerId(providerId)
                 .role(UserRole.USER)
                 .userStatus(UserStatus.ACTIVE)
@@ -295,7 +308,6 @@ public class AuthService {
                                 .userRole(user.getRole().name())
                                 .userStatus(user.getUserStatus().name())
                                 .isNewUser(isNewUser)
-                                .dogSetupRequired(false)
                                 .build()
                 )
                 .build();
@@ -340,62 +352,17 @@ public class AuthService {
             String nickname =
                     googleUser.getName();
 
-            User user =
-                    userRepository
-                            .findByProviderId(providerId)
-                            .orElseGet(() -> {
+            LinkedUserResult result = findOrLinkSocialUser(
+                    AuthProvider.GOOGLE,
+                    email,
+                    nickname,
+                    providerId
+            );
 
-                                User newUser =
-                                        User.builder()
-                                                .email(email)
-                                                .nickname(
-                                                        ensureUniqueNickname(
-                                                                nickname
-                                                        )
-                                                )
-                                                .authProvider(AuthProvider.GOOGLE)
-                                                .providerId(providerId)
-                                                .role(UserRole.USER)
-                                                .userStatus(UserStatus.ACTIVE)
-                                                .build();
-
-                                User savedUser = userRepository.save(newUser);
-
-                                Profile profile = Profile.builder()
-                                        .user(savedUser)
-                                        .avatarType(AvatarType.PRESET)
-                                        .avatarValue("default_avatar")
-                                        .build();
-
-                                profileRepository.save(profile);
-
-                                return savedUser;
-                            });
-
-            String accessToken =
-                    jwtProvider.createToken(
-                            user.getId()
-                    );
-
-            return LoginResponse.builder()
-                    .accessToken(accessToken)
-                    .refreshToken(null)
-                    .expiresIn(3600L)
-                    .user(
-                            LoginResponse.UserInfo.builder()
-                                    .id(user.getId())
-                                    .nickname(user.getNickname())
-                                    .userRole(
-                                            user.getRole().name()
-                                    )
-                                    .userStatus(
-                                            user.getUserStatus().name()
-                                    )
-                                    .isNewUser(false)
-                                    .dogSetupRequired(false)
-                                    .build()
-                    )
-                    .build();
+            return createLoginResponse(
+                    result.user(),
+                    result.isNewUser()
+            );
 
         } catch (Exception e) {
 
@@ -405,6 +372,17 @@ public class AuthService {
                     ErrorCode.GOOGLE_LOGIN_FAILED
             );
         }
+    }
+
+    @Transactional
+    public void withdraw(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        user.withdraw();
     }
 
     private String ensureUniqueNickname(String base) {
@@ -442,5 +420,11 @@ public class AuthService {
         }
 
         throw new BusinessException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+    }
+
+    private record LinkedUserResult(
+            User user,
+            boolean isNewUser
+    ) {
     }
 }

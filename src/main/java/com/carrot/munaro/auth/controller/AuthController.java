@@ -9,6 +9,7 @@ import com.carrot.munaro.auth.service.AuthService;
 import com.carrot.munaro.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
@@ -58,5 +59,17 @@ public class AuthController {
                 authService.googleLogin(request);
 
         return ApiResponse.ok(response);
+    }
+
+    @DeleteMapping("/withdraw")
+    public ApiResponse<Void> withdraw(
+            Authentication authentication
+    ) {
+
+        Long userId = (Long) authentication.getPrincipal();
+
+        authService.withdraw(userId);
+
+        return ApiResponse.ok(null);
     }
 }
