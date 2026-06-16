@@ -48,6 +48,11 @@ public class SecurityConfig {
                                 "/auth/**"
                         ).permitAll()
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/tourist-spots/nearby",
+                                "/tourist-spots/*"
+                        ).permitAll()
+                        .requestMatchers(
                                 HttpMethod.POST,
                                 "/admin/quizzes/generate/**"
                         ).permitAll()
