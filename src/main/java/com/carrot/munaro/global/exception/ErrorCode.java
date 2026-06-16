@@ -83,6 +83,25 @@ public enum ErrorCode {
             "이미 사용 중인 닉네임입니다."
     ),
 
+    // Quiz
+    QUIZ_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "QUIZ_NOT_FOUND",
+            "퀴즈를 찾을 수 없습니다."
+    ),
+
+    QUIZ_ANSWER_INVALID(
+            HttpStatus.BAD_REQUEST,
+            "QUIZ_ANSWER_INVALID",
+            "퀴즈 답안이 올바르지 않습니다."
+    ),
+
+    QUIZ_RESULT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "QUIZ_RESULT_NOT_FOUND",
+            "퀴즈 결과를 찾을 수 없습니다."
+    ),
+
     // TouristSpot
     TOURIST_SPOT_NOT_FOUND(
             HttpStatus.NOT_FOUND,

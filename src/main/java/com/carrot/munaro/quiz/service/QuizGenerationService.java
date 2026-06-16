@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -33,6 +32,7 @@ public class QuizGenerationService {
     private final QuizChoiceRepository quizChoiceRepository;
     private final QuizGenerationLogRepository generationLogRepository;
     private final OpenAIQuizService openAIQuizService;
+    private final QuizGenerationLogService quizGenerationLogService;
 
     @Transactional
     public QuizGenerationResultResponse generateAndSaveQuiz(
@@ -55,7 +55,12 @@ public class QuizGenerationService {
             QuizGenerationResponse response =
                     generateWithRetry(touristSpot);
             Quiz quiz = saveQuiz(touristSpot, response);
-            saveLog(touristSpot, QuizGenerationStatus.SUCCESS, null);
+
+            quizGenerationLogService.saveLog(
+                    touristSpot,
+                    QuizGenerationStatus.SUCCESS,
+                    null
+            );
 
             return new QuizGenerationResultResponse(
                     touristSpot.getId(),
@@ -64,10 +69,10 @@ public class QuizGenerationService {
             );
         } catch (Exception e) {
             log.error("OpenAI quiz generation failed.", e);
-            saveLog(
+            quizGenerationLogService.saveLog(
                     touristSpot,
                     QuizGenerationStatus.FAILED,
-                    e.getMessage()
+                    rootCauseMessage(e)
             );
             throw new BusinessException(ErrorCode.QUIZ_GENERATION_FAILED);
         }
@@ -186,22 +191,6 @@ public class QuizGenerationService {
         }
     }
 
-    private void saveLog(
-            TouristSpot touristSpot,
-            QuizGenerationStatus status,
-            String errorMessage
-    ) {
-
-        generationLogRepository.save(
-                QuizGenerationLog.builder()
-                        .touristSpot(touristSpot)
-                        .status(status)
-                        .errorMessage(errorMessage)
-                        .createdAt(OffsetDateTime.now())
-                        .build()
-        );
-    }
-
     private void sleepBeforeRetry(int attempt) {
 
         if (attempt >= MAX_ATTEMPTS) {
@@ -214,5 +203,22 @@ public class QuizGenerationService {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Retry sleep interrupted.", e);
         }
+    }
+
+    private String rootCauseMessage(Exception exception) {
+
+        Throwable current = exception;
+
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+
+        String message = current.getMessage();
+
+        if (message == null || message.isBlank()) {
+            return current.getClass().getSimpleName();
+        }
+
+        return message;
     }
 }

@@ -48,6 +48,10 @@ public class OpenAIQuizService {
 
         HttpEntity<Map<String, Object>> request =
                 new HttpEntity<>(buildRequestBody(prompt), headers);
+                new HttpEntity<>(
+                        buildRequestBody(buildPrompt(touristSpot)),
+                        headers
+                );
 
         String responseBody =
                 restTemplate.exchange(
@@ -165,7 +169,7 @@ public class OpenAIQuizService {
     private String buildPrompt(TouristSpot touristSpot) {
 
         return """
-                다음 관광지 정보를 기반으로 한국어 객관식 퀴즈 3개를 생성해라.
+                다음 관광지 정보를 기반으로 한국어 객관식 퀴즈 3개를 생성해줘.
 
                 규칙:
                 - 관광지 설명에 근거한 문제만 만든다.
