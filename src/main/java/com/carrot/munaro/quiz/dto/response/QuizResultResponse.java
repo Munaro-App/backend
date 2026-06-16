@@ -2,7 +2,7 @@ package com.carrot.munaro.quiz.dto.response;
 
 import java.time.OffsetDateTime;
 
-public record QuizSubmitResponse(
+public record QuizResultResponse(
 
         Long quizSubmissionId,
         Long quizId,

@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -34,14 +36,16 @@ public class AuthService {
     @Transactional
     public void signUp(EmailSignUpRequest request) {
 
-        if (userRepository.existsByEmail(request.email())) {
+        String email = normalizeEmail(request.email());
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new BusinessException(
                     ErrorCode.EMAIL_ALREADY_EXISTS
             );
         }
 
         User user = User.builder()
-                .email(request.email())
+                .email(email)
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
                 .authProvider(AuthProvider.EMAIL)
@@ -63,11 +67,19 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailIgnoreCase(
+                        normalizeEmail(request.email())
+                )
                 .orElseThrow(() ->
                         new BusinessException(
                                 ErrorCode.INVALID_LOGIN
                         ));
+
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_LOGIN
+            );
+        }
 
         if (!passwordEncoder.matches(
                 request.password(),
@@ -97,6 +109,15 @@ public class AuthService {
                                 .build()
                 )
                 .build();
+    }
+
+    private String normalizeEmail(String email) {
+
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     @Transactional
