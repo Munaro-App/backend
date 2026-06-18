@@ -1,50 +1,84 @@
 package com.carrot.munaro.tourist_spot.repository;
 
 import com.carrot.munaro.tourist_spot.domain.TouristSpot;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
+public interface TouristSpotRepository extends JpaRepository<TouristSpot, Long> {
 
-public interface TouristSpotRepository
-        extends JpaRepository<TouristSpot, Long> {
+    Page<TouristSpot> findByTouristSpotNameContainingIgnoreCaseOrAddressContainingIgnoreCase(
+            String touristSpotName,
+            String address,
+            Pageable pageable
+    );
 
     @Query(
             value = """
-                    select *
-                    from tourist_spots
-                    where latitude is not null
-                      and longitude is not null
-                      and (
-                          6371 * acos(
-                              least(1, greatest(-1,
-                                  cos(radians(:latitude))
-                                  * cos(radians(latitude))
-                                  * cos(radians(longitude) - radians(:longitude))
-                                  + sin(radians(:latitude))
-                                  * sin(radians(latitude))
-                              ))
+                    SELECT *
+                    FROM tourist_spots
+                    WHERE latitude IS NOT NULL
+                      AND longitude IS NOT NULL
+                      AND (
+                          6371 * ACOS(
+                              LEAST(
+                                  1,
+                                  GREATEST(
+                                      -1,
+                                      COS(RADIANS(:latitude))
+                                      * COS(RADIANS(CAST(latitude AS DOUBLE PRECISION)))
+                                      * COS(RADIANS(CAST(longitude AS DOUBLE PRECISION)) - RADIANS(:longitude))
+                                      + SIN(RADIANS(:latitude))
+                                      * SIN(RADIANS(CAST(latitude AS DOUBLE PRECISION)))
+                                  )
+                              )
                           )
                       ) <= :radiusKm
-                    order by (
-                        6371 * acos(
-                            least(1, greatest(-1,
-                                cos(radians(:latitude))
-                                * cos(radians(latitude))
-                                * cos(radians(longitude) - radians(:longitude))
-                                + sin(radians(:latitude))
-                                * sin(radians(latitude))
-                            ))
+                    ORDER BY (
+                        6371 * ACOS(
+                            LEAST(
+                                1,
+                                GREATEST(
+                                    -1,
+                                    COS(RADIANS(:latitude))
+                                    * COS(RADIANS(CAST(latitude AS DOUBLE PRECISION)))
+                                    * COS(RADIANS(CAST(longitude AS DOUBLE PRECISION)) - RADIANS(:longitude))
+                                    + SIN(RADIANS(:latitude))
+                                    * SIN(RADIANS(CAST(latitude AS DOUBLE PRECISION)))
+                                )
+                            )
                         )
-                    ) asc
-                    limit 100
+                    ) ASC
+                    """,
+            countQuery = """
+                    SELECT COUNT(*)
+                    FROM tourist_spots
+                    WHERE latitude IS NOT NULL
+                      AND longitude IS NOT NULL
+                      AND (
+                          6371 * ACOS(
+                              LEAST(
+                                  1,
+                                  GREATEST(
+                                      -1,
+                                      COS(RADIANS(:latitude))
+                                      * COS(RADIANS(CAST(latitude AS DOUBLE PRECISION)))
+                                      * COS(RADIANS(CAST(longitude AS DOUBLE PRECISION)) - RADIANS(:longitude))
+                                      + SIN(RADIANS(:latitude))
+                                      * SIN(RADIANS(CAST(latitude AS DOUBLE PRECISION)))
+                                  )
+                              )
+                          )
+                      ) <= :radiusKm
                     """,
             nativeQuery = true
     )
-    List<TouristSpot> findNearby(
-            @Param("latitude") double latitude,
-            @Param("longitude") double longitude,
-            @Param("radiusKm") double radiusKm
+    Page<TouristSpot> findNearby(
+            @Param("latitude") Double latitude,
+            @Param("longitude") Double longitude,
+            @Param("radiusKm") Double radiusKm,
+            Pageable pageable
     );
 }

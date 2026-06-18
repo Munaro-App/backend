@@ -2,29 +2,35 @@ package com.carrot.munaro.tourist_spot.dto.response;
 
 import com.carrot.munaro.tourist_spot.domain.TouristSpot;
 
-public record TouristSpotResponse(
+import java.math.BigDecimal;
 
+public record TouristSpotResponse(
         Long touristSpotId,
         String name,
-        String address,
-        String category,
+        String touristSpotName,
         String description,
-        Double latitude,
-        Double longitude,
-        String imageUrl
+        BigDecimal latitude,
+        BigDecimal longitude,
+        String address,
+        String publicAmenityInfo,
+        Integer parkingCapacity,
+        Integer visitorCapacity,
+        String managementPhone
 ) {
 
     public static TouristSpotResponse from(TouristSpot touristSpot) {
-
         return new TouristSpotResponse(
                 touristSpot.getId(),
-                touristSpot.getName(),
-                touristSpot.getAddress(),
-                touristSpot.getCategory(),
+                touristSpot.getTouristSpotName(),
+                touristSpot.getTouristSpotName(),
                 touristSpot.getDescription(),
                 touristSpot.getLatitude(),
                 touristSpot.getLongitude(),
-                touristSpot.getImageUrl()
+                touristSpot.getAddress(),
+                touristSpot.getPublicAmenityInfo(),
+                touristSpot.getParkingCapacity(),
+                touristSpot.getVisitorCapacity(),
+                touristSpot.getManagementPhone()
         );
     }
 }

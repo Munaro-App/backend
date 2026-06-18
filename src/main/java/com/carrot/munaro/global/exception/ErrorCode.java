@@ -60,8 +60,8 @@ public enum ErrorCode {
 
     GOOGLE_USER_INFO_NOT_FOUND(
             HttpStatus.BAD_REQUEST,
-            "GOOGLE_USER_INFO_NOT_FOUND",
-            "구글 사용자 정보를 불러올 수 없습니다."
+        "AUTH_007",
+                "구글 사용자 정보를 불러올 수 없습니다."
     ),
 
     // User
