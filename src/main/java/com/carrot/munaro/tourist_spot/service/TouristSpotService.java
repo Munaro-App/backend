@@ -2,6 +2,7 @@ package com.carrot.munaro.tourist_spot.service;
 
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
+import com.carrot.munaro.tourist_spot.domain.TouristSpot;
 import com.carrot.munaro.tourist_spot.dto.response.TouristSpotPageResponse;
 import com.carrot.munaro.tourist_spot.dto.response.TouristSpotResponse;
 import com.carrot.munaro.tourist_spot.repository.TouristSpotRepository;
@@ -22,19 +23,14 @@ public class TouristSpotService {
             String keyword,
             Pageable pageable
     ) {
-
         Page<TouristSpotResponse> touristSpots =
-                findTouristSpots(
-                        normalizeKeyword(keyword),
-                        pageable
-                )
+                findTouristSpots(normalizeKeyword(keyword), pageable)
                         .map(TouristSpotResponse::from);
 
         return TouristSpotPageResponse.from(touristSpots);
     }
 
     public TouristSpotResponse getTouristSpot(Long id) {
-
         return touristSpotRepository.findById(id)
                 .map(TouristSpotResponse::from)
                 .orElseThrow(() ->
@@ -50,30 +46,20 @@ public class TouristSpotService {
             Double radiusKm,
             Pageable pageable
     ) {
-
-        validateLocation(
-                latitude,
-                longitude,
-                radiusKm
-        );
+        validateLocation(latitude, longitude, radiusKm);
 
         Page<TouristSpotResponse> touristSpots =
-                touristSpotRepository.findNearby(
-                                latitude,
-                                longitude,
-                                radiusKm,
-                                pageable
-                        )
+                touristSpotRepository
+                        .findNearby(latitude, longitude, radiusKm, pageable)
                         .map(TouristSpotResponse::from);
 
         return TouristSpotPageResponse.from(touristSpots);
     }
 
-    private Page<com.carrot.munaro.tourist_spot.domain.TouristSpot> findTouristSpots(
+    private Page<TouristSpot> findTouristSpots(
             String keyword,
             Pageable pageable
     ) {
-
         if (keyword == null || keyword.isBlank()) {
             return touristSpotRepository.findAll(pageable);
         }
@@ -87,7 +73,6 @@ public class TouristSpotService {
     }
 
     private String normalizeKeyword(String keyword) {
-
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
@@ -100,7 +85,6 @@ public class TouristSpotService {
             Double longitude,
             Double radiusKm
     ) {
-
         if (latitude == null || longitude == null) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }

@@ -67,9 +67,18 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/seasons/**",
+                                "/rankings/current",
+                                "/rankings/seasons/**",
                                 "/tourist-spots/nearby",
                                 "/tourist-spots/search",
                                 "/tourist-spots/*"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/admin/seasons/rollover",
+                                "/admin/quizzes/generate/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()

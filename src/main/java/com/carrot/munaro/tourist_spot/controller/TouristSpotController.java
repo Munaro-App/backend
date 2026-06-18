@@ -29,7 +29,6 @@ public class TouristSpotController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-
         Pageable pageable =
                 PageRequest.of(
                         page,
@@ -38,10 +37,7 @@ public class TouristSpotController {
                 );
 
         return ApiResponse.ok(
-                touristSpotService.getTouristSpots(
-                        keyword,
-                        pageable
-                )
+                touristSpotService.getTouristSpots(keyword, pageable)
         );
     }
 
@@ -53,12 +49,7 @@ public class TouristSpotController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size
     ) {
-
-        Pageable pageable =
-                PageRequest.of(
-                        page,
-                        size
-                );
+        Pageable pageable = PageRequest.of(page, size);
 
         return ApiResponse.ok(
                 touristSpotService.getNearbyTouristSpots(
@@ -70,20 +61,19 @@ public class TouristSpotController {
         );
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<TouristSpotResponse> getTouristSpot(
-            @PathVariable Long id
-    ) {
-
-        return ApiResponse.ok(
-                touristSpotService.getTouristSpot(id)
-        );
-    }
-
     @GetMapping("/search")
     public String search(
             @RequestParam String keyword
     ) {
         return kakaoLocalClient.searchPlace(keyword);
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<TouristSpotResponse> getTouristSpot(
+            @PathVariable Long id
+    ) {
+        return ApiResponse.ok(
+                touristSpotService.getTouristSpot(id)
+        );
     }
 }

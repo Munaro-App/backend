@@ -5,7 +5,8 @@ import com.carrot.munaro.tourist_spot.domain.TouristSpot;
 import java.math.BigDecimal;
 
 public record TouristSpotResponse(
-        Long id,
+        Long touristSpotId,
+        String name,
         String touristSpotName,
         String description,
         BigDecimal latitude,
@@ -20,6 +21,7 @@ public record TouristSpotResponse(
     public static TouristSpotResponse from(TouristSpot touristSpot) {
         return new TouristSpotResponse(
                 touristSpot.getId(),
+                touristSpot.getTouristSpotName(),
                 touristSpot.getTouristSpotName(),
                 touristSpot.getDescription(),
                 touristSpot.getLatitude(),

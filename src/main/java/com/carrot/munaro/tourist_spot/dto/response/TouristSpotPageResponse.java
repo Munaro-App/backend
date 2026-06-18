@@ -25,4 +25,18 @@ public record TouristSpotPageResponse(
                 page.isLast()
         );
     }
+
+    public static TouristSpotPageResponse singlePage(
+            List<TouristSpotResponse> content
+    ) {
+        return new TouristSpotPageResponse(
+                content,
+                0,
+                content.size(),
+                content.size(),
+                content.isEmpty() ? 0 : 1,
+                true,
+                true
+        );
+    }
 }

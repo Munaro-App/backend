@@ -1,6 +1,6 @@
 package com.carrot.munaro.user.controller;
 
-import com.carrot.munaro.user.domain.User;
+import com.carrot.munaro.user.dto.response.UserResponse;
 import com.carrot.munaro.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -16,7 +16,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/me")
-    public User me(Authentication authentication) {
+    public UserResponse me(Authentication authentication) {
 
         Long userId =
                 (Long) authentication.getPrincipal();

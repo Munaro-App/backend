@@ -59,4 +59,12 @@ public class TouristSpot {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    public String getName() {
+        return touristSpotName;
+    }
+
+    public String getCategory() {
+        return null;
+    }
 }
