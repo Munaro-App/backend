@@ -37,6 +37,19 @@ public interface RankingRepository
                    ranking.rank AS rank
             FROM Ranking ranking
             WHERE ranking.season.id = :seasonId
+            ORDER BY ranking.rank ASC, ranking.user.id ASC
+            """)
+    List<RankingRow> findRankingRowsBySeasonId(
+            @Param("seasonId") Long seasonId
+    );
+
+    @Query("""
+            SELECT ranking.user.id AS userId,
+                   ranking.nickname AS nickname,
+                   ranking.score AS score,
+                   ranking.rank AS rank
+            FROM Ranking ranking
+            WHERE ranking.season.id = :seasonId
               AND ranking.user.id = :userId
             """)
     RankingRow findMyRankingRow(

@@ -69,7 +69,9 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/seasons/**",
                                 "/rankings/current",
-                                "/rankings/seasons/**",
+                                "/rankings/current/top3",
+                                "/rankings/seasons/*",
+                                "/rankings/seasons/*/top3",
                                 "/tourist-spots/nearby",
                                 "/tourist-spots/search",
                                 "/tourist-spots/*"

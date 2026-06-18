@@ -44,6 +44,34 @@ public interface ScoreRepository
 
     @Query(
             value = """
+                    SELECT
+                        ranked.user_id AS "userId",
+                        ranked.nickname AS "nickname",
+                        ranked.score AS "score",
+                        ranked.ranking AS "rank"
+                    FROM (
+                        SELECT
+                            u.user_id,
+                            u.nickname,
+                            COALESCE(SUM(s.points), 0)::int AS score,
+                            RANK() OVER (
+                                ORDER BY COALESCE(SUM(s.points), 0) DESC, u.user_id ASC
+                            )::int AS ranking
+                        FROM scores s
+                        JOIN users u ON u.user_id = s.user_id
+                        WHERE s.season_id = :seasonId
+                        GROUP BY u.user_id, u.nickname
+                    ) ranked
+                    ORDER BY ranked.ranking ASC, ranked.user_id ASC
+                    """,
+            nativeQuery = true
+    )
+    List<RankingRow> findRankingRows(
+            @Param("seasonId") Long seasonId
+    );
+
+    @Query(
+            value = """
                     SELECT COUNT(*)
                     FROM (
                         SELECT s.user_id
