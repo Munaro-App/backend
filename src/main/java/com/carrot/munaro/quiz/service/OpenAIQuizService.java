@@ -180,12 +180,10 @@ public class OpenAIQuizService {
 
                 관광지명: %s
                 설명: %s
-                카테고리: %s
                 주소: %s
                 """.formatted(
-                nullToBlank(touristSpot.getName()),
+                nullToBlank(touristSpot.getTouristSpotName()),
                 nullToBlank(touristSpot.getDescription()),
-                nullToBlank(touristSpot.getCategory()),
                 nullToBlank(touristSpot.getAddress())
         );
     }

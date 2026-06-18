@@ -92,8 +92,8 @@ public class QuizService {
 
         return new QuizResponse(
                 quiz.getId(),
-                quiz.getTouristSpot().getId(),
-                quiz.getTouristSpot().getName(),
+                quiz.getTouristSpot().getTouristSpotId(),
+                quiz.getTouristSpot().getTouristSpotName(),
                 quiz.getTitle(),
                 quiz.getDifficulty().name(),
                 questionResponses

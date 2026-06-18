@@ -25,7 +25,8 @@ public class TouristSpot {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "tourist_spot_id")
+    private Long touristSpotId;
 
     @Column(name = "tourist_spot_name", nullable = false, length = 255)
     private String touristSpotName;
@@ -60,11 +61,4 @@ public class TouristSpot {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public String getName() {
-        return touristSpotName;
-    }
-
-    public String getCategory() {
-        return null;
-    }
 }
