@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
-    boolean existsByTouristSpotId(Long touristSpotId);
-    Optional<Quiz> findByTouristSpotId(Long touristSpotId);
+    boolean existsByTouristSpot_TouristSpotId(Long touristSpotId);
+    Optional<Quiz> findByTouristSpot_TouristSpotId(Long touristSpotId);
 }

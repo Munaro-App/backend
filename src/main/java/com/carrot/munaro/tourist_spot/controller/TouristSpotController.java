@@ -33,7 +33,7 @@ public class TouristSpotController {
                 PageRequest.of(
                         page,
                         size,
-                        Sort.by("id").ascending()
+                        Sort.by("touristSpotId").ascending()
                 );
 
         return ApiResponse.ok(
