@@ -112,4 +112,11 @@ public interface ScoreRepository
             @Param("seasonId") Long seasonId,
             @Param("userId") Long userId
     );
+
+    @Query("""
+            SELECT COALESCE(SUM(score.points), 0)
+            FROM Score score
+            WHERE score.user.id = :userId
+            """)
+    Integer sumPointsByUserId(@Param("userId") Long userId);
 }

@@ -42,4 +42,17 @@ public class QuizSubmission {
 
     @Column(name = "submitted_at", nullable = false)
     private OffsetDateTime submittedAt;
+
+    public void updateProgress(
+            QuizSubmissionStatus status,
+            int totalQuestionCount,
+            int correctAnswerCount,
+            int score
+    ) {
+        this.status = status;
+        this.totalQuestionCount = totalQuestionCount;
+        this.correctAnswerCount = correctAnswerCount;
+        this.score = score;
+        this.submittedAt = OffsetDateTime.now();
+    }
 }
