@@ -7,14 +7,18 @@ import com.carrot.munaro.score.domain.Season;
 import com.carrot.munaro.score.repository.ScoreRepository;
 import com.carrot.munaro.score.repository.projection.RankingRow;
 import com.carrot.munaro.score.service.SeasonService;
+import com.carrot.munaro.user.domain.AvatarType;
 import com.carrot.munaro.user.domain.Badge;
 import com.carrot.munaro.user.domain.Profile;
 import com.carrot.munaro.user.domain.User;
 import com.carrot.munaro.user.domain.UserBadge;
 import com.carrot.munaro.user.domain.UserVisitedTouristSpot;
+import com.carrot.munaro.user.dto.request.ProfileImageUpdateRequest;
 import com.carrot.munaro.user.dto.response.BadgeResponse;
+import com.carrot.munaro.user.dto.response.ProfileImageResponse;
 import com.carrot.munaro.user.dto.response.UserResponse;
 import com.carrot.munaro.user.dto.response.UserStatisticsResponse;
+import com.carrot.munaro.user.repository.ProfileRepository;
 import com.carrot.munaro.user.repository.UserBadgeRepository;
 import com.carrot.munaro.user.repository.UserRepository;
 import com.carrot.munaro.user.repository.UserVisitedTouristSpotRepository;
@@ -35,6 +39,7 @@ public class UserService {
     private final SeasonService seasonService;
     private final QuizSubmissionRepository quizSubmissionRepository;
     private final UserBadgeRepository userBadgeRepository;
+    private final ProfileRepository profileRepository;
 
     @Transactional(readOnly = true)
     public UserResponse getMe(Long userId) {
@@ -79,6 +84,34 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
+    public ProfileImageResponse updateProfileImage(
+            Long userId,
+            ProfileImageUpdateRequest request
+    ) {
+
+        User user = getUser(userId);
+        Profile profile = getOrCreateProfile(user);
+
+        profile.updateProfileImage(
+                request.avatarType(),
+                request.avatarValue().trim()
+        );
+
+        return toProfileImageResponse(user, profile);
+    }
+
+    @Transactional
+    public ProfileImageResponse deleteProfileImage(Long userId) {
+
+        User user = getUser(userId);
+        Profile profile = getOrCreateProfile(user);
+
+        profile.resetProfileImage();
+
+        return toProfileImageResponse(user, profile);
+    }
+
     private UserStatisticsResponse buildStatistics(
             Long userId,
             List<String> visitedSidos
@@ -120,6 +153,40 @@ public class UserService {
                 .badgeType(badge.getBadgeType())
                 .badgeImageUrl(badge.getBadgeImageUrl())
                 .build();
+    }
+
+    private User getUser(Long userId) {
+
+        return userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+    }
+
+    private Profile getOrCreateProfile(User user) {
+
+        return profileRepository.findByUserId(user.getId())
+                .orElseGet(() ->
+                        profileRepository.save(
+                                Profile.builder()
+                                        .user(user)
+                                        .avatarType(AvatarType.PRESET)
+                                        .avatarValue("default_avatar")
+                                        .build()
+                        )
+                );
+    }
+
+    private ProfileImageResponse toProfileImageResponse(
+            User user,
+            Profile profile
+    ) {
+
+        return new ProfileImageResponse(
+                user.getId(),
+                profile.getAvatarType(),
+                profile.getAvatarValue()
+        );
     }
 
 }
