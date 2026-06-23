@@ -5,8 +5,8 @@ import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.quiz.repository.QuizSubmissionRepository;
 import com.carrot.munaro.score.domain.Season;
 import com.carrot.munaro.score.repository.ScoreRepository;
-import com.carrot.munaro.score.repository.SeasonRepository;
 import com.carrot.munaro.score.repository.projection.RankingRow;
+import com.carrot.munaro.score.service.SeasonService;
 import com.carrot.munaro.user.domain.Badge;
 import com.carrot.munaro.user.domain.Profile;
 import com.carrot.munaro.user.domain.User;
@@ -22,9 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +32,7 @@ public class UserService {
     private final UserVisitedTouristSpotRepository
             userVisitedTouristSpotRepository;
     private final ScoreRepository scoreRepository;
-    private final SeasonRepository seasonRepository;
+    private final SeasonService seasonService;
     private final QuizSubmissionRepository quizSubmissionRepository;
     private final UserBadgeRepository userBadgeRepository;
 
@@ -98,19 +96,10 @@ public class UserService {
 
     private Integer getCurrentSeasonRank(Long userId) {
 
-        Optional<Season> currentSeason =
-                seasonRepository
-                        .findFirstByStartedAtLessThanEqualAndEndedAtGreaterThan(
-                                OffsetDateTime.now(),
-                                OffsetDateTime.now()
-                        );
-
-        if (currentSeason.isEmpty()) {
-            return null;
-        }
+        Season currentSeason = seasonService.getOrCreateCurrentSeason();
 
         RankingRow rankingRow = scoreRepository.findMyRankingRow(
-                currentSeason.get().getId(),
+                currentSeason.getId(),
                 userId
         );
 

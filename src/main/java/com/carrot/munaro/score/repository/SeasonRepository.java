@@ -15,5 +15,10 @@ public interface SeasonRepository
             OffsetDateTime endedAt
     );
 
+    Optional<Season> findFirstByStartedAtAndEndedAt(
+            OffsetDateTime startedAt,
+            OffsetDateTime endedAt
+    );
+
     List<Season> findByEndedAtLessThanEqual(OffsetDateTime now);
 }

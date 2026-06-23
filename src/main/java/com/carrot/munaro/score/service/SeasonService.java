@@ -10,10 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.YearMonth;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -21,7 +20,6 @@ import java.util.List;
 public class SeasonService {
 
     private static final ZoneId SEASON_ZONE = ZoneId.of("Asia/Seoul");
-    private static final YearMonth FIRST_SEASON_MONTH = YearMonth.of(2026, 6);
 
     private final SeasonRepository seasonRepository;
     private final RankingSnapshotService rankingSnapshotService;
@@ -38,14 +36,16 @@ public class SeasonService {
     @Transactional
     public Season getOrCreateCurrentSeason() {
 
-        OffsetDateTime now = OffsetDateTime.now(SEASON_ZONE);
+        SeasonPeriod currentSeasonPeriod = getSeasonPeriod(
+                OffsetDateTime.now(SEASON_ZONE)
+        );
 
         return seasonRepository
-                .findFirstByStartedAtLessThanEqualAndEndedAtGreaterThan(
-                        now,
-                        now
+                .findFirstByStartedAtAndEndedAt(
+                        currentSeasonPeriod.startedAt(),
+                        currentSeasonPeriod.endedAt()
                 )
-                .orElseGet(this::createCurrentMonthSeason);
+                .orElseGet(() -> createSeason(currentSeasonPeriod));
     }
 
     @Transactional
@@ -89,42 +89,88 @@ public class SeasonService {
         );
     }
 
-    private Season createCurrentMonthSeason() {
-
-        YearMonth currentMonth = YearMonth.now(SEASON_ZONE);
-        String seasonName = createSeasonName(currentMonth);
+    private Season createSeason(SeasonPeriod seasonPeriod) {
 
         return seasonRepository.save(
                 Season.builder()
-                        .seasonName(seasonName)
-                        .startedAt(
-                                currentMonth.atDay(1)
-                                        .atStartOfDay(SEASON_ZONE)
-                                        .toOffsetDateTime()
-                        )
-                        .endedAt(
-                                currentMonth.plusMonths(1)
-                                        .atDay(1)
-                                        .atStartOfDay(SEASON_ZONE)
-                                        .toOffsetDateTime()
-                        )
+                        .seasonName(seasonPeriod.seasonName())
+                        .startedAt(seasonPeriod.startedAt())
+                        .endedAt(seasonPeriod.endedAt())
                         .createdAt(OffsetDateTime.now(SEASON_ZONE))
                         .build()
         );
     }
 
-    private String createSeasonName(YearMonth seasonMonth) {
+    private SeasonPeriod getSeasonPeriod(OffsetDateTime now) {
 
-        long seasonNumber =
-                ChronoUnit.MONTHS.between(
-                        FIRST_SEASON_MONTH,
-                        seasonMonth
-                ) + 1;
+        int year = now.getYear();
+        int month = now.getMonthValue();
 
-        if (seasonNumber < 1) {
-            seasonNumber = 1;
-        }
+        return switch (month) {
+            case 3, 4, 5 -> createSeasonPeriod(
+                    "봄 시즌",
+                    year,
+                    3,
+                    year,
+                    6
+            );
+            case 6, 7, 8 -> createSeasonPeriod(
+                    "여름 시즌",
+                    year,
+                    6,
+                    year,
+                    9
+            );
+            case 9, 10, 11 -> createSeasonPeriod(
+                    "가을 시즌",
+                    year,
+                    9,
+                    year,
+                    12
+            );
+            case 12 -> createSeasonPeriod(
+                    "겨울 시즌",
+                    year,
+                    12,
+                    year + 1,
+                    3
+            );
+            case 1, 2 -> createSeasonPeriod(
+                    "겨울 시즌",
+                    year - 1,
+                    12,
+                    year,
+                    3
+            );
+            default -> throw new IllegalStateException(
+                    "Invalid month: " + month
+            );
+        };
+    }
 
-        return "시즌 " + seasonNumber;
+    private SeasonPeriod createSeasonPeriod(
+            String seasonName,
+            int startYear,
+            int startMonth,
+            int endYear,
+            int endMonth
+    ) {
+
+        return new SeasonPeriod(
+                seasonName,
+                LocalDate.of(startYear, startMonth, 1)
+                        .atStartOfDay(SEASON_ZONE)
+                        .toOffsetDateTime(),
+                LocalDate.of(endYear, endMonth, 1)
+                        .atStartOfDay(SEASON_ZONE)
+                        .toOffsetDateTime()
+        );
+    }
+
+    private record SeasonPeriod(
+            String seasonName,
+            OffsetDateTime startedAt,
+            OffsetDateTime endedAt
+    ) {
     }
 }
