@@ -8,6 +8,7 @@ import com.carrot.munaro.score.dto.response.SeasonResponse;
 import com.carrot.munaro.score.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -33,7 +34,7 @@ public class SeasonService {
                 );
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Season getOrCreateCurrentSeason() {
 
         SeasonPeriod currentSeasonPeriod = getSeasonPeriod(
@@ -45,7 +46,16 @@ public class SeasonService {
                         currentSeasonPeriod.startedAt(),
                         currentSeasonPeriod.endedAt()
                 )
-                .orElseGet(() -> createSeason(currentSeasonPeriod));
+                .orElseGet(() -> seasonRepository
+                        .findFirstByStartedAt(
+                                currentSeasonPeriod.startedAt()
+                        )
+                        .map(season -> alignSeasonPeriod(
+                                season,
+                                currentSeasonPeriod
+                        ))
+                        .orElseGet(() -> createSeason(currentSeasonPeriod))
+                );
     }
 
     @Transactional
@@ -99,6 +109,20 @@ public class SeasonService {
                         .createdAt(OffsetDateTime.now(SEASON_ZONE))
                         .build()
         );
+    }
+
+    private Season alignSeasonPeriod(
+            Season season,
+            SeasonPeriod seasonPeriod
+    ) {
+
+        season.updatePeriod(
+                seasonPeriod.seasonName(),
+                seasonPeriod.startedAt(),
+                seasonPeriod.endedAt()
+        );
+
+        return season;
     }
 
     private SeasonPeriod getSeasonPeriod(OffsetDateTime now) {

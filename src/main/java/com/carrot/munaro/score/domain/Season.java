@@ -38,6 +38,17 @@ public class Season {
         this.active = false;
     }
 
+    public void updatePeriod(
+            String seasonName,
+            OffsetDateTime startedAt,
+            OffsetDateTime endedAt
+    ) {
+        this.seasonName = seasonName;
+        this.startedAt = startedAt;
+        this.endedAt = endedAt;
+        this.active = true;
+    }
+
     public boolean isExpired(OffsetDateTime now) {
         return !now.isBefore(endedAt);
     }
