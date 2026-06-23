@@ -15,13 +15,6 @@ public interface QuizSubmissionRepository
             Long userId
     );
 
-    Optional<QuizSubmission>
-    findTopByQuizIdAndUserIdAndStatusOrderBySubmittedAtDesc(
-            Long quizId,
-            Long userId,
-            com.carrot.munaro.quiz.domain.QuizSubmissionStatus status
-    );
-
     @Query("""
             SELECT COUNT(submission)
             FROM QuizSubmission submission

@@ -113,29 +113,6 @@ public class QuizGradingService {
         );
     }
 
-    @Transactional
-    public QuizSubmitResponse skipQuiz(
-            Long quizId,
-            Long userId
-    ) {
-
-        Quiz quiz = getQuiz(quizId);
-        User user = getUser(userId);
-        int totalQuestionCount =
-                quizQuestionRepository.findByQuizIdOrderByIdAsc(quizId)
-                        .size();
-
-        QuizSubmission submission = saveSubmission(
-                quiz,
-                user,
-                QuizSubmissionStatus.SKIPPED,
-                totalQuestionCount,
-                0
-        );
-
-        return toSubmitResponse(submission, null);
-    }
-
     @Transactional(readOnly = true)
     public QuizResultResponse getLatestResult(
             Long quizId,

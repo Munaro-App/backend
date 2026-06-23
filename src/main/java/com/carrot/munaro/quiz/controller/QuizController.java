@@ -47,19 +47,6 @@ public class QuizController {
         );
     }
 
-    @PostMapping("/{quizId}/skip")
-    public ApiResponse<QuizSubmitResponse> skipQuiz(
-            @PathVariable Long quizId,
-            Authentication authentication
-    ) {
-
-        Long userId = (Long) authentication.getPrincipal();
-
-        return ApiResponse.ok(
-                quizGradingService.skipQuiz(quizId, userId)
-        );
-    }
-
     @GetMapping("/{quizId}/result")
     public ApiResponse<QuizResultResponse> getLatestResult(
             @PathVariable Long quizId,
