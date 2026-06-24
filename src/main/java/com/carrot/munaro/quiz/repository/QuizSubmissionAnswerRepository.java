@@ -1,6 +1,7 @@
 package com.carrot.munaro.quiz.repository;
 
 import com.carrot.munaro.quiz.domain.QuizSubmissionAnswer;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -16,6 +17,17 @@ public interface QuizSubmissionAnswerRepository
 
     List<QuizSubmissionAnswer> findBySubmissionIdOrderByQuizQuestionIdAsc(
             Long submissionId
+    );
+
+    @EntityGraph(attributePaths = {
+            "submission",
+            "quizQuestion",
+            "selectedChoice",
+            "correctChoice"
+    })
+    List<QuizSubmissionAnswer>
+    findBySubmissionIdInOrderBySubmissionIdDescQuizQuestionIdAsc(
+            List<Long> submissionIds
     );
 
     long countBySubmissionId(Long submissionId);

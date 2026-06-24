@@ -2,10 +2,13 @@ package com.carrot.munaro.quiz.controller;
 
 import com.carrot.munaro.global.response.ApiResponse;
 import com.carrot.munaro.quiz.dto.request.QuizSubmitRequest;
+import com.carrot.munaro.quiz.dto.response.QuizHistoryResponse;
 import com.carrot.munaro.quiz.dto.response.QuizResultResponse;
 import com.carrot.munaro.quiz.dto.response.QuizResponse;
 import com.carrot.munaro.quiz.dto.response.QuizSubmitResponse;
+import com.carrot.munaro.quiz.dto.response.TouristSpotQuizHistoryDetailResponse;
 import com.carrot.munaro.quiz.service.QuizGradingService;
+import com.carrot.munaro.quiz.service.QuizHistoryService;
 import com.carrot.munaro.quiz.service.QuizService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,34 @@ public class QuizController {
 
     private final QuizService quizService;
     private final QuizGradingService quizGradingService;
+    private final QuizHistoryService quizHistoryService;
+
+    @GetMapping("/history")
+    public ApiResponse<QuizHistoryResponse> getMyQuizHistory(
+            Authentication authentication
+    ) {
+
+        Long userId = (Long) authentication.getPrincipal();
+
+        return ApiResponse.ok(quizHistoryService.getMyQuizHistory(userId));
+    }
+
+    @GetMapping("/history/tourist-spots/{touristSpotId}")
+    public ApiResponse<TouristSpotQuizHistoryDetailResponse>
+    getMyTouristSpotQuizHistory(
+            @PathVariable Long touristSpotId,
+            Authentication authentication
+    ) {
+
+        Long userId = (Long) authentication.getPrincipal();
+
+        return ApiResponse.ok(
+                quizHistoryService.getMyTouristSpotQuizHistory(
+                        userId,
+                        touristSpotId
+                )
+        );
+    }
 
     @GetMapping("/{quizId}")
     public ApiResponse<QuizResponse> getQuiz(
