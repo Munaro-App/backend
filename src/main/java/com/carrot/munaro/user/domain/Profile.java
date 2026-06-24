@@ -32,4 +32,17 @@ public class Profile {
 
     @Column(length = 255)
     private String bio;
+
+    public void updateProfileImage(
+            AvatarType avatarType,
+            String avatarValue
+    ) {
+        this.avatarType = avatarType;
+        this.avatarValue = avatarValue;
+    }
+
+    public void resetProfileImage() {
+        this.avatarType = AvatarType.PRESET;
+        this.avatarValue = "default_avatar";
+    }
 }

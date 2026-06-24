@@ -3,13 +3,12 @@ package com.carrot.munaro.score.service;
 import com.carrot.munaro.score.domain.Season;
 import com.carrot.munaro.score.dto.response.MyRankingResponse;
 import com.carrot.munaro.score.dto.response.RankingItemResponse;
-import com.carrot.munaro.score.dto.response.RankingPageResponse;
+import com.carrot.munaro.score.dto.response.RankingResponse;
 import com.carrot.munaro.score.repository.RankingRepository;
 import com.carrot.munaro.score.repository.ScoreRepository;
 import com.carrot.munaro.score.repository.projection.RankingRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,30 +23,55 @@ public class RankingQueryService {
     private final RankingRepository rankingRepository;
 
     @Transactional(readOnly = true)
-    public RankingPageResponse getCurrentSeasonRanking(
-            int page,
-            int size
-    ) {
+    public RankingResponse getCurrentSeasonRanking() {
 
         Season season = seasonService.getOrCreateCurrentSeason();
-        return getRanking(season, page, size);
+        return getRanking(season);
     }
 
     @Transactional(readOnly = true)
-    public RankingPageResponse getSeasonRanking(
-            Long seasonId,
-            int page,
-            int size
-    ) {
+    public RankingResponse getSeasonRanking(Long seasonId) {
 
         Season season = seasonService.getSeason(seasonId);
-        return getRanking(season, page, size);
+        return getRanking(season);
     }
 
     @Transactional(readOnly = true)
     public MyRankingResponse getMyCurrentSeasonRanking(Long userId) {
 
         Season season = seasonService.getOrCreateCurrentSeason();
+        return getMyRanking(season, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public MyRankingResponse getMySeasonRanking(
+            Long seasonId,
+            Long userId
+    ) {
+
+        Season season = seasonService.getSeason(seasonId);
+        return getMyRanking(season, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public RankingResponse getCurrentSeasonTop3Ranking() {
+
+        Season season = seasonService.getOrCreateCurrentSeason();
+        return getTop3Ranking(season);
+    }
+
+    @Transactional(readOnly = true)
+    public RankingResponse getSeasonTop3Ranking(Long seasonId) {
+
+        Season season = seasonService.getSeason(seasonId);
+        return getTop3Ranking(season);
+    }
+
+    private MyRankingResponse getMyRanking(
+            Season season,
+            Long userId
+    ) {
+
         RankingRow row = scoreRepository.findMyRankingRow(
                 season.getId(),
                 userId
@@ -60,47 +84,46 @@ public class RankingQueryService {
         return new MyRankingResponse(row.getRank(), row.getScore());
     }
 
-    private RankingPageResponse getRanking(
-            Season season,
-            int page,
-            int size
-    ) {
-
-        int normalizedPage = Math.max(page, 0);
-        int normalizedSize = Math.max(size, 1);
-        int offset = normalizedPage * normalizedSize;
+    private RankingResponse getRanking(Season season) {
 
         List<RankingRow> rows;
-        long totalElements;
 
         if (season.isActive(java.time.OffsetDateTime.now())
                 || !rankingRepository.existsBySeasonId(season.getId())) {
-            rows = scoreRepository.findRankingRows(
-                    season.getId(),
-                    normalizedSize,
-                    offset
-            );
-            totalElements = scoreRepository.countRankingUsers(season.getId());
+            rows = scoreRepository.findRankingRows(season.getId());
         } else {
-            Pageable pageable =
-                    PageRequest.of(normalizedPage, normalizedSize);
-            rows = rankingRepository.findRankingRowsBySeasonId(
-                    season.getId(),
-                    pageable
-            );
-            totalElements = rankingRepository.countBySeasonId(season.getId());
+            rows = rankingRepository.findRankingRowsBySeasonId(season.getId());
         }
 
-        return new RankingPageResponse(
+        return new RankingResponse(
                 season.getId(),
                 season.getSeasonName(),
                 rows.stream()
                         .map(this::toRankingItem)
-                        .toList(),
-                normalizedPage,
-                normalizedSize,
-                totalElements,
-                calculateTotalPages(totalElements, normalizedSize)
+                        .toList()
+        );
+    }
+
+    private RankingResponse getTop3Ranking(Season season) {
+
+        List<RankingRow> rows;
+
+        if (season.isActive(java.time.OffsetDateTime.now())
+                || !rankingRepository.existsBySeasonId(season.getId())) {
+            rows = scoreRepository.findRankingRows(season.getId(), 3, 0);
+        } else {
+            rows = rankingRepository.findRankingRowsBySeasonId(
+                    season.getId(),
+                    PageRequest.of(0, 3)
+            );
+        }
+
+        return new RankingResponse(
+                season.getId(),
+                season.getSeasonName(),
+                rows.stream()
+                        .map(this::toRankingItem)
+                        .toList()
         );
     }
 
@@ -112,17 +135,5 @@ public class RankingQueryService {
                 row.getScore(),
                 row.getRank()
         );
-    }
-
-    private int calculateTotalPages(
-            long totalElements,
-            int size
-    ) {
-
-        if (totalElements == 0) {
-            return 0;
-        }
-
-        return (int) Math.ceil((double) totalElements / size);
     }
 }

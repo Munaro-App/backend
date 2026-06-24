@@ -15,10 +15,10 @@ public record QuizSubmitRequest(
     public record AnswerRequest(
 
             @NotNull(message = "문제 ID는 필수입니다.")
-            Long questionId,
+            Long quizQuestionId,
 
             @NotNull(message = "선택지 ID는 필수입니다.")
-            Long choiceId
+            Long quizChoiceId
     ) {
     }
 }

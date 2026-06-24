@@ -2,19 +2,44 @@ package com.carrot.munaro.user.service;
 
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
+import com.carrot.munaro.quiz.repository.QuizSubmissionRepository;
+import com.carrot.munaro.score.domain.Season;
+import com.carrot.munaro.score.repository.ScoreRepository;
+import com.carrot.munaro.score.repository.projection.RankingRow;
+import com.carrot.munaro.score.service.SeasonService;
+import com.carrot.munaro.user.domain.AvatarType;
+import com.carrot.munaro.user.domain.Badge;
 import com.carrot.munaro.user.domain.Profile;
 import com.carrot.munaro.user.domain.User;
+import com.carrot.munaro.user.domain.UserBadge;
+import com.carrot.munaro.user.domain.UserVisitedTouristSpot;
+import com.carrot.munaro.user.dto.request.ProfileImageUpdateRequest;
+import com.carrot.munaro.user.dto.response.BadgeResponse;
+import com.carrot.munaro.user.dto.response.ProfileImageResponse;
 import com.carrot.munaro.user.dto.response.UserResponse;
+import com.carrot.munaro.user.dto.response.UserStatisticsResponse;
+import com.carrot.munaro.user.repository.ProfileRepository;
+import com.carrot.munaro.user.repository.UserBadgeRepository;
 import com.carrot.munaro.user.repository.UserRepository;
+import com.carrot.munaro.user.repository.UserVisitedTouristSpotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserVisitedTouristSpotRepository
+            userVisitedTouristSpotRepository;
+    private final ScoreRepository scoreRepository;
+    private final SeasonService seasonService;
+    private final QuizSubmissionRepository quizSubmissionRepository;
+    private final UserBadgeRepository userBadgeRepository;
+    private final ProfileRepository profileRepository;
 
     @Transactional(readOnly = true)
     public UserResponse getMe(Long userId) {
@@ -26,26 +51,142 @@ public class UserService {
                 );
 
         Profile profile = user.getProfile();
+        List<UserVisitedTouristSpot> visitedTouristSpots =
+                userVisitedTouristSpotRepository
+                        .findByUser_IdOrderByVisitedAtDesc(userId);
+        List<String> visitedSidos = visitedTouristSpots.stream()
+                .map(visited -> visited.getTouristSpot().getSido())
+                .filter(sido -> sido != null && !sido.isBlank())
+                .distinct()
+                .toList();
+        UserStatisticsResponse statistics =
+                buildStatistics(userId, visitedSidos);
+        List<BadgeResponse> recentBadges =
+                userBadgeRepository.findTop3ByUser_IdOrderByEarnedAtDesc(
+                                userId
+                        )
+                        .stream()
+                        .map(this::toBadgeResponse)
+                        .toList();
 
         return UserResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
-                .email(user.getEmail())
                 .avatarValue(
                         profile != null
                                 ? profile.getAvatarValue()
                                 : null
                 )
-                .mbti(
-                        profile != null
-                                ? profile.getMbti()
-                                : null
-                )
-                .bio(
-                        profile != null
-                                ? profile.getBio()
-                                : null
-                )
+                .seasonRank(getCurrentSeasonRank(userId))
+                .statistics(statistics)
+                .visitedSidos(visitedSidos)
+                .recentBadges(recentBadges)
                 .build();
     }
+
+    @Transactional
+    public ProfileImageResponse updateProfileImage(
+            Long userId,
+            ProfileImageUpdateRequest request
+    ) {
+
+        User user = getUser(userId);
+        Profile profile = getOrCreateProfile(user);
+
+        profile.updateProfileImage(
+                request.avatarType(),
+                request.avatarValue().trim()
+        );
+
+        return toProfileImageResponse(user, profile);
+    }
+
+    @Transactional
+    public ProfileImageResponse deleteProfileImage(Long userId) {
+
+        User user = getUser(userId);
+        Profile profile = getOrCreateProfile(user);
+
+        profile.resetProfileImage();
+
+        return toProfileImageResponse(user, profile);
+    }
+
+    private UserStatisticsResponse buildStatistics(
+            Long userId,
+            List<String> visitedSidos
+    ) {
+
+        return UserStatisticsResponse.builder()
+                .totalPoints(scoreRepository.sumPointsByUserId(userId))
+                .completedSpots((int) userVisitedTouristSpotRepository
+                        .countByUser_Id(userId))
+                .visitedSidoCount(visitedSidos.size())
+                .perfectCount((int) quizSubmissionRepository
+                        .countPerfectSubmissionsByUserId(userId))
+                .build();
+    }
+
+    private Integer getCurrentSeasonRank(Long userId) {
+
+        Season currentSeason = seasonService.getOrCreateCurrentSeason();
+
+        RankingRow rankingRow = scoreRepository.findMyRankingRow(
+                currentSeason.getId(),
+                userId
+        );
+
+        if (rankingRow == null) {
+            return null;
+        }
+
+        return rankingRow.getRank();
+    }
+
+    private BadgeResponse toBadgeResponse(UserBadge userBadge) {
+
+        Badge badge = userBadge.getBadge();
+
+        return BadgeResponse.builder()
+                .badgeId(badge.getId())
+                .badgeName(badge.getBadgeName())
+                .badgeType(badge.getBadgeType())
+                .badgeImageUrl(badge.getBadgeImageUrl())
+                .build();
+    }
+
+    private User getUser(Long userId) {
+
+        return userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+    }
+
+    private Profile getOrCreateProfile(User user) {
+
+        return profileRepository.findByUserId(user.getId())
+                .orElseGet(() ->
+                        profileRepository.save(
+                                Profile.builder()
+                                        .user(user)
+                                        .avatarType(AvatarType.PRESET)
+                                        .avatarValue("default_avatar")
+                                        .build()
+                        )
+                );
+    }
+
+    private ProfileImageResponse toProfileImageResponse(
+            User user,
+            Profile profile
+    ) {
+
+        return new ProfileImageResponse(
+                user.getId(),
+                profile.getAvatarType(),
+                profile.getAvatarValue()
+        );
+    }
+
 }

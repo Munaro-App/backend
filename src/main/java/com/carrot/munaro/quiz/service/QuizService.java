@@ -37,10 +37,21 @@ public class QuizService {
         return toResponse(quiz);
     }
 
+    @Transactional(readOnly = true)
+    public QuizResponse getQuizByTouristSpot(Long touristSpotId) {
+
+        Quiz quiz = quizRepository.findByTouristSpot_TouristSpotId(touristSpotId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.QUIZ_NOT_FOUND)
+                );
+
+        return toResponse(quiz);
+    }
+
     @Transactional
     public QuizResponse getOrCreateQuizByTouristSpot(Long touristSpotId) {
 
-        Quiz quiz = quizRepository.findByTouristSpotId(touristSpotId)
+        Quiz quiz = quizRepository.findByTouristSpot_TouristSpotId(touristSpotId)
                 .orElseGet(() -> {
                     Long quizId = quizGenerationService
                             .generateAndSaveQuiz(touristSpotId)
@@ -92,8 +103,8 @@ public class QuizService {
 
         return new QuizResponse(
                 quiz.getId(),
-                quiz.getTouristSpot().getId(),
-                quiz.getTouristSpot().getName(),
+                quiz.getTouristSpot().getTouristSpotId(),
+                quiz.getTouristSpot().getTouristSpotName(),
                 quiz.getTitle(),
                 quiz.getDifficulty().name(),
                 questionResponses

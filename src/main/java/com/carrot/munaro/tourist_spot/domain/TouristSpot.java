@@ -25,7 +25,8 @@ public class TouristSpot {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "tourist_spot_id")
+    private Long touristSpotId;
 
     @Column(name = "tourist_spot_name", nullable = false, length = 255)
     private String touristSpotName;
@@ -38,6 +39,9 @@ public class TouristSpot {
 
     @Column(nullable = false, precision = 12, scale = 8)
     private BigDecimal longitude;
+
+    @Column(name = "sido", length = 50)
+    private String sido;
 
     @Column(nullable = false, length = 500)
     private String address;
@@ -60,11 +64,4 @@ public class TouristSpot {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public String getName() {
-        return touristSpotName;
-    }
-
-    public String getCategory() {
-        return null;
-    }
 }

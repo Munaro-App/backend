@@ -47,7 +47,7 @@ public class QuizGenerationService {
                                 )
                         );
 
-        if (quizRepository.existsByTouristSpotId(touristSpotId)) {
+        if (quizRepository.existsByTouristSpot_TouristSpotId(touristSpotId)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
@@ -63,7 +63,7 @@ public class QuizGenerationService {
             );
 
             return new QuizGenerationResultResponse(
-                    touristSpot.getId(),
+                    touristSpot.getTouristSpotId(),
                     quiz.getId(),
                     response.questions().size()
             );
@@ -95,7 +95,7 @@ public class QuizGenerationService {
                 log.warn(
                         "Quiz generation attempt {} failed. touristSpotId={}",
                         attempt,
-                        touristSpot.getId(),
+                        touristSpot.getTouristSpotId(),
                         e
                 );
                 sleepBeforeRetry(attempt);
