@@ -3,6 +3,8 @@ package com.carrot.munaro.score.service;
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.score.domain.Season;
+import com.carrot.munaro.score.dto.response.SeasonResponse;
+import com.carrot.munaro.score.dto.response.SeasonRolloverResponse;
 import com.carrot.munaro.score.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class SeasonService {
     private static final ZoneId SEASON_ZONE = ZoneId.of("Asia/Seoul");
 
     private final SeasonRepository seasonRepository;
+    private final RankingSnapshotService rankingSnapshotService;
 
     @Transactional(readOnly = true)
     public Season getSeason(Long seasonId) {
@@ -34,13 +38,72 @@ public class SeasonService {
     public Season getOrCreateCurrentSeason() {
 
         OffsetDateTime now = OffsetDateTime.now(SEASON_ZONE);
+        SeasonPeriod currentSeasonPeriod = getSeasonPeriod(now);
 
         return seasonRepository
                 .findFirstByStartedAtLessThanEqualAndEndedAtGreaterThanOrderByEndedAtDesc(
                         now,
                         now
                 )
-                .orElseGet(() -> createSeason(getSeasonPeriod(now)));
+                .orElseGet(() -> seasonRepository
+                        .findFirstByStartedAtAndEndedAt(
+                                currentSeasonPeriod.startedAt(),
+                                currentSeasonPeriod.endedAt()
+                        )
+                        .orElseGet(() -> seasonRepository
+                                .findFirstByStartedAt(
+                                        currentSeasonPeriod.startedAt()
+                                )
+                                .map(season -> alignSeasonPeriod(
+                                        season,
+                                        currentSeasonPeriod
+                                ))
+                                .orElseGet(() ->
+                                        createSeason(currentSeasonPeriod)
+                                )
+                        )
+                );
+    }
+
+    @Transactional
+    public SeasonResponse getCurrentSeason() {
+
+        Season season = getOrCreateCurrentSeason();
+        return SeasonResponse.from(season);
+    }
+
+    @Transactional
+    public SeasonRolloverResponse rolloverExpiredSeasons() {
+
+        OffsetDateTime now = OffsetDateTime.now(SEASON_ZONE);
+        List<Season> expiredSeasons =
+                seasonRepository.findByActiveTrueAndEndedAtLessThanEqual(now);
+
+        int savedRankingCount = 0;
+        int skippedSeasonCount = 0;
+
+        for (Season season : expiredSeasons) {
+            int snapshotCount = rankingSnapshotService.snapshotSeason(
+                    season,
+                    now
+            );
+
+            if (snapshotCount < 0) {
+                skippedSeasonCount++;
+            } else {
+                savedRankingCount += snapshotCount;
+            }
+
+            season.close();
+        }
+
+        getOrCreateCurrentSeason();
+
+        return new SeasonRolloverResponse(
+                expiredSeasons.size(),
+                skippedSeasonCount,
+                savedRankingCount
+        );
     }
 
     private Season createSeason(SeasonPeriod seasonPeriod) {
@@ -55,18 +118,64 @@ public class SeasonService {
         );
     }
 
+    private Season alignSeasonPeriod(
+            Season season,
+            SeasonPeriod seasonPeriod
+    ) {
+
+        season.updatePeriod(
+                seasonPeriod.seasonName(),
+                seasonPeriod.startedAt(),
+                seasonPeriod.endedAt()
+        );
+
+        return season;
+    }
+
     private SeasonPeriod getSeasonPeriod(OffsetDateTime now) {
 
         int year = now.getYear();
         int month = now.getMonthValue();
 
         return switch (month) {
-            case 3, 4, 5 -> createSeasonPeriod("봄 시즌", year, 3, year, 6);
-            case 6, 7, 8 -> createSeasonPeriod("여름 시즌", year, 6, year, 9);
-            case 9, 10, 11 -> createSeasonPeriod("가을 시즌", year, 9, year, 12);
-            case 12 -> createSeasonPeriod("겨울 시즌", year, 12, year + 1, 3);
-            case 1, 2 -> createSeasonPeriod("겨울 시즌", year - 1, 12, year, 3);
-            default -> throw new IllegalStateException("Invalid month: " + month);
+            case 3, 4, 5 -> createSeasonPeriod(
+                    "봄 시즌",
+                    year,
+                    3,
+                    year,
+                    6
+            );
+            case 6, 7, 8 -> createSeasonPeriod(
+                    "여름 시즌",
+                    year,
+                    6,
+                    year,
+                    9
+            );
+            case 9, 10, 11 -> createSeasonPeriod(
+                    "가을 시즌",
+                    year,
+                    9,
+                    year,
+                    12
+            );
+            case 12 -> createSeasonPeriod(
+                    "겨울 시즌",
+                    year,
+                    12,
+                    year + 1,
+                    3
+            );
+            case 1, 2 -> createSeasonPeriod(
+                    "겨울 시즌",
+                    year - 1,
+                    12,
+                    year,
+                    3
+            );
+            default -> throw new IllegalStateException(
+                    "Invalid month: " + month
+            );
         };
     }
 

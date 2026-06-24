@@ -220,9 +220,11 @@ public class AuthService {
             String providerId
     ) {
 
+        final boolean[] created = {false};
         User user = userRepository
                 .findByAuthProviderAndProviderId(provider, providerId)
                 .orElseGet(() -> {
+                    created[0] = true;
                     User savedUser = userRepository.save(
                             User.builder()
                                     .nickname(ensureUniqueNickname(nickname))
@@ -241,7 +243,7 @@ public class AuthService {
         validateActiveUser(user);
         linkSocialAccountIfAbsent(user, provider, providerId);
 
-        return new LinkedUserResult(user, true);
+        return new LinkedUserResult(user, created[0]);
     }
 
     private void linkSocialAccountIfAbsent(
