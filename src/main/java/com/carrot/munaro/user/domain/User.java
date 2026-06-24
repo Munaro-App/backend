@@ -1,7 +1,20 @@
 package com.carrot.munaro.user.domain;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
@@ -52,11 +65,15 @@ public class User {
         this.providerId = providerId;
     }
 
-    public void withdraw() {
-        this.userStatus = UserStatus.DELETED;
-        this.email = "deleted_user_" + id + "@deleted.local";
-        this.nickname = "deleted_" + id;
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void withdraw(String anonymizedNickname) {
+        this.nickname = anonymizedNickname;
+        this.email = null;
         this.password = null;
         this.providerId = null;
+        this.userStatus = UserStatus.DELETED;
     }
 }

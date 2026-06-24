@@ -10,12 +10,21 @@ import com.carrot.munaro.auth.dto.response.LoginResponse;
 import com.carrot.munaro.global.exception.BusinessException;
 import com.carrot.munaro.global.exception.ErrorCode;
 import com.carrot.munaro.security.JwtProvider;
-import com.carrot.munaro.user.domain.*;
+import com.carrot.munaro.user.domain.AuthProvider;
+import com.carrot.munaro.user.domain.AvatarType;
+import com.carrot.munaro.user.domain.Profile;
+import com.carrot.munaro.user.domain.User;
+import com.carrot.munaro.user.domain.UserRole;
+import com.carrot.munaro.user.domain.UserSocialAccount;
+import com.carrot.munaro.user.domain.UserStatus;
 import com.carrot.munaro.user.repository.ProfileRepository;
 import com.carrot.munaro.user.repository.UserRepository;
 import com.carrot.munaro.user.repository.UserSocialAccountRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,9 +51,7 @@ public class AuthService {
         String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new BusinessException(
-                    ErrorCode.EMAIL_ALREADY_EXISTS
-            );
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         User user = User.builder()
@@ -56,15 +63,7 @@ public class AuthService {
                 .userStatus(UserStatus.ACTIVE)
                 .build();
 
-        User savedUser = userRepository.save(user);
-
-        Profile profile = Profile.builder()
-                .user(savedUser)
-                .avatarType(AvatarType.PRESET)
-                .avatarValue("default_avatar")
-                .build();
-
-        profileRepository.save(profile);
+        createDefaultProfile(userRepository.save(user));
     }
 
     @Transactional(readOnly = true)
@@ -74,212 +73,175 @@ public class AuthService {
                         normalizeEmail(request.email())
                 )
                 .orElseThrow(() ->
-                        new BusinessException(
-                                ErrorCode.INVALID_LOGIN
-                        ));
+                        new BusinessException(ErrorCode.INVALID_LOGIN)
+                );
+
+        validateActiveUser(user);
+
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_LOGIN);
+        }
 
         if (!passwordEncoder.matches(
                 request.password(),
                 user.getPassword()
         )) {
-            throw new BusinessException(
-                    ErrorCode.INVALID_LOGIN
-            );
+            throw new BusinessException(ErrorCode.INVALID_LOGIN);
         }
 
-        String accessToken =
-                jwtProvider.createAccessToken(user.getId());
-
-        String refreshToken =
-                jwtProvider.createRefreshToken(user.getId());
-
-
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .expiresIn(3600L)
-                .user(
-                        LoginResponse.UserInfo.builder()
-                                .id(user.getId())
-                                .nickname(user.getNickname())
-                                .userRole(user.getRole().name())
-                                .userStatus(user.getUserStatus().name())
-                                .isNewUser(false)
-                                .build()
-                )
-                .build();
+        return createLoginResponse(user, false);
     }
 
     @Transactional
-    public LoginResponse kakaoLogin(
-            KakaoLoginRequest request
-    ) {
+    public LoginResponse kakaoLogin(KakaoLoginRequest request) {
 
         try {
-
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(request.accessToken());
-
-            HttpEntity<Void> entity =
-                    new HttpEntity<>(headers);
 
             ResponseEntity<KakaoUserResponse> response =
                     restTemplate.exchange(
                             "https://kapi.kakao.com/v2/user/me",
                             HttpMethod.GET,
-                            entity,
+                            new HttpEntity<Void>(headers),
                             KakaoUserResponse.class
                     );
 
-            KakaoUserResponse kakaoUser =
-                    response.getBody();
+            KakaoUserResponse kakaoUser = response.getBody();
 
-            if (kakaoUser == null ||
-                    kakaoUser.getKakao_account() == null ||
-                    kakaoUser.getKakao_account().getProfile() == null) {
-
+            if (kakaoUser == null
+                    || kakaoUser.getId() == null
+                    || kakaoUser.getKakao_account() == null
+                    || kakaoUser.getKakao_account().getProfile() == null) {
                 throw new BusinessException(
                         ErrorCode.KAKAO_USER_INFO_NOT_FOUND
                 );
             }
 
-            String email =
-                    normalizeEmail(kakaoUser.getKakao_account().getEmail());
+            String providerId = String.valueOf(kakaoUser.getId());
+            String nickname = kakaoUser.getKakao_account()
+                    .getProfile()
+                    .getNickname();
 
-            String nickname =
-                    kakaoUser.getKakao_account()
-                            .getProfile()
-                            .getNickname();
-
-            if (kakaoUser.getId() == null) {
+            if (nickname == null || nickname.isBlank()) {
                 throw new BusinessException(
                         ErrorCode.KAKAO_USER_INFO_NOT_FOUND
                 );
             }
 
-            String providerId =
-                    String.valueOf(kakaoUser.getId());
-
-            if (nickname == null) {
-                throw new BusinessException(
-                        ErrorCode.KAKAO_USER_INFO_NOT_FOUND
-                );
-            }
-
-            LinkedUserResult result = findOrLinkSocialUser(
+            LinkedUserResult result = findOrCreateSocialUser(
                     AuthProvider.KAKAO,
-                    email,
                     nickname,
                     providerId
             );
 
-            return createLoginResponse(
-                    result.user(),
-                    result.isNewUser()
-            );
-
+            return createLoginResponse(result.user(), result.isNewUser());
         } catch (BusinessException e) {
             throw e;
-
         } catch (ResourceAccessException e) {
-
-            e.printStackTrace();
-
-            throw new BusinessException(
-                    ErrorCode.KAKAO_SERVER_TIMEOUT
-            );
-
+            throw new BusinessException(ErrorCode.KAKAO_SERVER_TIMEOUT);
         } catch (Exception e) {
-
-            e.printStackTrace();
-
-            throw new BusinessException(
-                    ErrorCode.KAKAO_LOGIN_FAILED
-            );
+            throw new BusinessException(ErrorCode.KAKAO_LOGIN_FAILED);
         }
     }
 
-    private LinkedUserResult findOrLinkSocialUser(
+    @Transactional
+    public LoginResponse googleLogin(GoogleLoginRequest request) {
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(request.accessToken());
+
+            ResponseEntity<GoogleUserResponse> response =
+                    restTemplate.exchange(
+                            "https://www.googleapis.com/oauth2/v3/userinfo",
+                            HttpMethod.GET,
+                            new HttpEntity<Void>(headers),
+                            GoogleUserResponse.class
+                    );
+
+            GoogleUserResponse googleUser = response.getBody();
+
+            if (googleUser == null
+                    || googleUser.getSub() == null
+                    || googleUser.getSub().isBlank()) {
+                throw new BusinessException(
+                        ErrorCode.GOOGLE_USER_INFO_NOT_FOUND
+                );
+            }
+
+            LinkedUserResult result = findOrCreateSocialUser(
+                    AuthProvider.GOOGLE,
+                    googleUser.getName(),
+                    googleUser.getSub()
+            );
+
+            return createLoginResponse(result.user(), result.isNewUser());
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.GOOGLE_LOGIN_FAILED);
+        }
+    }
+
+    @Transactional
+    public void withdraw(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        user.withdraw("deleted_user_" + user.getId());
+    }
+
+    private LinkedUserResult findOrCreateSocialUser(
             AuthProvider provider,
-            String email,
             String nickname,
             String providerId
     ) {
 
         return userSocialAccountRepository
-                .findByProviderAndProviderUserId(
-                        provider,
-                        providerId
-                )
-                .map(account -> new LinkedUserResult(
-                        account.getUser(),
-                        false
-                ))
-                .orElseGet(() -> findUserByProviderOrCreateSocialUser(
+                .findByProviderAndProviderUserId(provider, providerId)
+                .map(account -> {
+                    validateActiveUser(account.getUser());
+                    return new LinkedUserResult(account.getUser(), false);
+                })
+                .orElseGet(() -> createSocialUserWithAccount(
                         provider,
                         nickname,
                         providerId
                 ));
     }
 
-    private LinkedUserResult findUserByProviderOrCreateSocialUser(
+    private LinkedUserResult createSocialUserWithAccount(
             AuthProvider provider,
             String nickname,
             String providerId
     ) {
 
-        User user = null;
-        boolean isNewUser = false;
+        User user = userRepository
+                .findByAuthProviderAndProviderId(provider, providerId)
+                .orElseGet(() -> {
+                    User savedUser = userRepository.save(
+                            User.builder()
+                                    .nickname(ensureUniqueNickname(nickname))
+                                    .authProvider(provider)
+                                    .providerId(providerId)
+                                    .role(UserRole.USER)
+                                    .userStatus(UserStatus.ACTIVE)
+                                    .build()
+                    );
 
-        if (providerId != null && !providerId.isBlank()) {
-            user = userRepository
-                    .findByAuthProviderAndProviderId(provider, providerId)
-                    .orElse(null);
-        }
+                    createDefaultProfile(savedUser);
 
-        if (user == null) {
-            user = createSocialUser(
-                    provider,
-                    nickname,
-                    providerId
-            );
-            isNewUser = true;
-        }
+                    return savedUser;
+                });
 
-        linkSocialAccountIfAbsent(
-                user,
-                provider,
-                providerId
-        );
+        validateActiveUser(user);
+        linkSocialAccountIfAbsent(user, provider, providerId);
 
-        return new LinkedUserResult(user, isNewUser);
-    }
-
-    private User createSocialUser(
-            AuthProvider provider,
-            String nickname,
-            String providerId
-    ) {
-
-        User newUser = User.builder()
-                .nickname(ensureUniqueNickname(nickname))
-                .authProvider(provider)
-                .providerId(providerId)
-                .role(UserRole.USER)
-                .userStatus(UserStatus.ACTIVE)
-                .build();
-
-        User savedUser = userRepository.save(newUser);
-
-        Profile profile = Profile.builder()
-                .user(savedUser)
-                .avatarType(AvatarType.PRESET)
-                .avatarValue("default_avatar")
-                .build();
-
-        profileRepository.save(profile);
-
-        return savedUser;
+        return new LinkedUserResult(user, true);
     }
 
     private void linkSocialAccountIfAbsent(
@@ -302,20 +264,25 @@ public class AuthService {
         );
     }
 
+    private void createDefaultProfile(User user) {
+
+        profileRepository.save(
+                Profile.builder()
+                        .user(user)
+                        .avatarType(AvatarType.PRESET)
+                        .avatarValue(Profile.DEFAULT_AVATAR_VALUE)
+                        .build()
+        );
+    }
+
     private LoginResponse createLoginResponse(
             User user,
             boolean isNewUser
     ) {
 
-        String accessToken =
-                jwtProvider.createAccessToken(user.getId());
-
-        String refreshToken =
-                jwtProvider.createRefreshToken(user.getId());
-
         return LoginResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
+                .accessToken(jwtProvider.createAccessToken(user.getId()))
+                .refreshToken(jwtProvider.createRefreshToken(user.getId()))
                 .expiresIn(3600L)
                 .user(
                         LoginResponse.UserInfo.builder()
@@ -324,90 +291,17 @@ public class AuthService {
                                 .userRole(user.getRole().name())
                                 .userStatus(user.getUserStatus().name())
                                 .isNewUser(isNewUser)
+                                .dogSetupRequired(false)
                                 .build()
                 )
                 .build();
     }
 
-    @Transactional
-    public LoginResponse googleLogin(
-            GoogleLoginRequest request
-    ) {
+    private void validateActiveUser(User user) {
 
-        try {
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(request.accessToken());
-
-            HttpEntity<Void> entity =
-                    new HttpEntity<>(headers);
-
-            ResponseEntity<GoogleUserResponse> response =
-                    restTemplate.exchange(
-                            "https://www.googleapis.com/oauth2/v3/userinfo",
-                            HttpMethod.GET,
-                            entity,
-                            GoogleUserResponse.class
-                    );
-
-            GoogleUserResponse googleUser =
-                    response.getBody();
-
-            if (googleUser == null) {
-                throw new BusinessException(
-                        ErrorCode.GOOGLE_USER_INFO_NOT_FOUND
-                );
-            }
-
-            String providerId =
-                    googleUser.getSub();
-
-            String email =
-                    normalizeEmail(googleUser.getEmail());
-
-            String nickname =
-                    googleUser.getName();
-
-            if (providerId == null || providerId.isBlank()) {
-                throw new BusinessException(
-                        ErrorCode.GOOGLE_USER_INFO_NOT_FOUND
-                );
-            }
-
-            LinkedUserResult result = findOrLinkSocialUser(
-                    AuthProvider.GOOGLE,
-                    email,
-                    nickname,
-                    providerId
-            );
-
-            return createLoginResponse(
-                    result.user(),
-                    result.isNewUser()
-            );
-
-        } catch (BusinessException e) {
-            throw e;
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            throw new BusinessException(
-                    ErrorCode.GOOGLE_LOGIN_FAILED
-            );
+        if (user.getUserStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.INVALID_LOGIN);
         }
-    }
-
-    @Transactional
-    public void withdraw(Long userId) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new BusinessException(ErrorCode.USER_NOT_FOUND)
-                );
-
-        user.withdraw();
     }
 
     private String ensureUniqueNickname(String base) {
@@ -430,15 +324,12 @@ public class AuthService {
                 return candidate;
             }
 
-            String suffix =
-                    String.valueOf(
-                            ThreadLocalRandom.current()
-                                    .nextInt(1000, 10000)
-                    );
-
-            int baseMaxLength = Math.max(2, 16 - suffix.length());
-            String prefix = cleaned.length() > baseMaxLength
-                    ? cleaned.substring(0, baseMaxLength)
+            String suffix = String.valueOf(
+                    ThreadLocalRandom.current().nextInt(1000, 10000)
+            );
+            int prefixMaxLength = Math.max(2, 16 - suffix.length());
+            String prefix = cleaned.length() > prefixMaxLength
+                    ? cleaned.substring(0, prefixMaxLength)
                     : cleaned;
 
             candidate = prefix + suffix;

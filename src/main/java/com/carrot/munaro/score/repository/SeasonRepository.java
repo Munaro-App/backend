@@ -3,6 +3,14 @@ package com.carrot.munaro.score.repository;
 import com.carrot.munaro.score.domain.Season;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface SeasonRepository
-        extends JpaRepository<Season, Long> {
+import java.time.OffsetDateTime;
+import java.util.Optional;
+
+public interface SeasonRepository extends JpaRepository<Season, Long> {
+
+    Optional<Season>
+    findFirstByStartedAtLessThanEqualAndEndedAtGreaterThanOrderByEndedAtDesc(
+            OffsetDateTime nowForStart,
+            OffsetDateTime nowForEnd
+    );
 }

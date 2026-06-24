@@ -83,6 +83,18 @@ public enum ErrorCode {
             "프로필을 찾을 수 없습니다."
     ),
 
+    STORAGE_NOT_CONFIGURED(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "STORAGE_NOT_CONFIGURED",
+            "스토리지 설정이 필요합니다."
+    ),
+
+    FILE_UPLOAD_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "FILE_UPLOAD_FAILED",
+            "파일 업로드 URL 발급에 실패했습니다."
+    ),
+
     NICKNAME_ALREADY_EXISTS(
             HttpStatus.BAD_REQUEST,
             "NICKNAME_ALREADY_EXISTS",
@@ -94,6 +106,13 @@ public enum ErrorCode {
             HttpStatus.NOT_FOUND,
             "TOURIST_SPOT_NOT_FOUND",
             "관광지를 찾을 수 없습니다."
+    ),
+
+    // Season
+    SEASON_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "SEASON_NOT_FOUND",
+            "시즌을 찾을 수 없습니다."
     );
 
     private final HttpStatus status;
